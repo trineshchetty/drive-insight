@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Drive Insight — UX Design Directions</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0F172A; color: #F1F5F9; }
+
+    /* ── Nav ── */
+    .main-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: #0F172A; border-bottom: 1px solid #334155;
+      display: flex; align-items: center; gap: 8px; padding: 12px 24px;
+      overflow-x: auto; white-space: nowrap;
+    }
+    .main-nav h1 { font-size: 14px; font-weight: 700; color: #1D6AE5; margin-right: 16px; flex-shrink: 0; }
+    .dir-btn {
+      padding: 6px 14px; border-radius: 6px; border: 1px solid #334155;
+      background: transparent; color: #94A3B8; cursor: pointer;
+      font-size: 12px; font-weight: 500; transition: all 150ms ease;
+      flex-shrink: 0;
+    }
+    .dir-btn:hover { border-color: #1D6AE5; color: #F1F5F9; }
+    .dir-btn.active { background: #1D6AE5; border-color: #1D6AE5; color: #fff; }
+
+    /* ── Pages ── */
+    .page { display: none; padding-top: 56px; min-height: 100vh; }
+    .page.active { display: block; }
+
+    /* ════════════════════════════════════════
+       DIRECTION 1 — "Monday-Style Command"
+       Clean sidebar + card grid, light mode feel
+    ════════════════════════════════════════ */
+    .d1 { background: #F8F9FC; color: #0F172A; }
+
+    .d1 .shell { display: flex; height: calc(100vh - 56px); }
+
+    .d1 .sidebar {
+      width: 220px; flex-shrink: 0; background: #fff;
+      border-right: 1px solid #E2E8F0; padding: 20px 0;
+      display: flex; flex-direction: column;
+    }
+    .d1 .sidebar-logo { padding: 0 20px 20px; font-size: 16px; font-weight: 700; color: #1D6AE5; border-bottom: 1px solid #E2E8F0; margin-bottom: 12px; }
+    .d1 .nav-item {
+      padding: 9px 20px; display: flex; align-items: center; gap: 10px;
+      font-size: 13px; color: #475569; cursor: pointer; transition: all 150ms;
+    }
+    .d1 .nav-item:hover { background: #F8F9FC; color: #0F172A; }
+    .d1 .nav-item.active { background: #EFF6FF; color: #1D6AE5; border-left: 3px solid #1D6AE5; font-weight: 600; }
+    .d1 .nav-item .icon { width: 16px; text-align: center; }
+    .d1 .nav-badge { margin-left: auto; background: #DC2626; color: #fff; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; }
+
+    .d1 .topbar {
+      height: 56px; background: #fff; border-bottom: 1px solid #E2E8F0;
+      display: flex; align-items: center; padding: 0 24px; gap: 12px; flex-shrink: 0;
+    }
+    .d1 .search {
+      flex: 1; max-width: 400px; background: #F8F9FC; border: 1px solid #E2E8F0;
+      border-radius: 8px; padding: 7px 12px; font-size: 13px; color: #64748B;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .d1 .bell { margin-left: auto; position: relative; cursor: pointer; }
+    .d1 .bell-badge { position: absolute; top: -4px; right: -4px; background: #DC2626; color: #fff; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 8px; }
+    .d1 .avatar { width: 32px; height: 32px; border-radius: 50%; background: #1D6AE5; color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+
+    .d1 .content { flex: 1; overflow-y: auto; padding: 24px; }
+
+    .d1 .briefing {
+      background: #fff; border: 1px solid #E2E8F0; border-left: 4px solid #1D6AE5;
+      border-radius: 10px; padding: 20px 24px; margin-bottom: 20px;
+      display: flex; align-items: flex-start; gap: 24px;
+    }
+    .d1 .briefing-title { font-size: 15px; font-weight: 700; color: #0F172A; margin-bottom: 12px; }
+    .d1 .briefing-stats { display: flex; gap: 20px; flex-wrap: wrap; }
+    .d1 .bstat { display: flex; flex-direction: column; gap: 2px; }
+    .d1 .bstat-num { font-size: 22px; font-weight: 700; }
+    .d1 .bstat-label { font-size: 11px; color: #64748B; }
+    .d1 .bstat.success .bstat-num { color: #16A34A; }
+    .d1 .bstat.danger .bstat-num { color: #DC2626; }
+    .d1 .bstat.neutral .bstat-num { color: #0F172A; }
+    .d1 .briefing-actions { margin-left: auto; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+    .d1 .btn-primary { background: #DC2626; color: #fff; border: none; border-radius: 7px; padding: 8px 16px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .d1 .btn-secondary { background: #F0FDF4; color: #16A34A; border: 1px solid #BBF7D0; border-radius: 7px; padding: 8px 16px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .d1 .btn-tertiary { background: #EFF6FF; color: #1D6AE5; border: 1px solid #BFDBFE; border-radius: 7px; padding: 8px 16px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+
+    .d1 .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+    .d1 .metric-card { background: #fff; border: 1px solid #E2E8F0; border-radius: 10px; padding: 20px; }
+    .d1 .metric-label { font-size: 12px; color: #64748B; font-weight: 500; margin-bottom: 8px; }
+    .d1 .metric-value { font-size: 28px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+    .d1 .metric-delta { font-size: 12px; }
+    .d1 .metric-delta.up { color: #16A34A; }
+    .d1 .metric-delta.down { color: #DC2626; }
+    .d1 .metric-delta.warn { color: #D97706; }
+    .d1 .sparkline { margin-top: 12px; display: flex; align-items: flex-end; gap: 3px; height: 32px; }
+    .d1 .spark-bar { width: 8px; border-radius: 2px; background: #BFDBFE; }
+    .d1 .spark-bar.highlight { background: #1D6AE5; }
+
+    .d1 .lead-section { background: #fff; border: 1px solid #E2E8F0; border-radius: 10px; overflow: hidden; }
+    .d1 .lead-header { padding: 16px 20px; border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; gap: 12px; }
+    .d1 .lead-title { font-size: 14px; font-weight: 600; }
+    .d1 .lead-count { background: #FEF2F2; color: #DC2626; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+    .d1 .lead-row { padding: 14px 20px; border-bottom: 1px solid #F1F5F9; display: flex; align-items: center; gap: 12px; }
+    .d1 .lead-row:hover { background: #F8F9FC; }
+    .d1 .badge { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 5px; flex-shrink: 0; }
+    .d1 .badge.hot { background: #FEF2F2; color: #DC2626; }
+    .d1 .badge.warm { background: #FFF7ED; color: #EA580C; }
+    .d1 .lead-name { font-size: 13px; font-weight: 600; flex: 1; }
+    .d1 .lead-reason { font-size: 12px; color: #64748B; flex: 2; }
+    .d1 .lead-time { font-size: 11px; color: #94A3B8; flex-shrink: 0; }
+    .d1 .lead-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .d1 .act-btn { padding: 5px 10px; border-radius: 5px; border: 1px solid #E2E8F0; background: #fff; font-size: 11px; font-weight: 500; color: #475569; cursor: pointer; white-space: nowrap; }
+    .d1 .act-btn:hover { border-color: #1D6AE5; color: #1D6AE5; }
+    .d1 .act-btn.primary { background: #1D6AE5; border-color: #1D6AE5; color: #fff; }
+
+
+    /* ════════════════════════════════════════
+       DIRECTION 2 — "Dark Command Centre"
+       Dark mode, high contrast, premium feel
+    ════════════════════════════════════════ */
+    .d2 { background: #0F172A; color: #F1F5F9; }
+
+    .d2 .shell { display: flex; height: calc(100vh - 56px); }
+
+    .d2 .sidebar {
+      width: 220px; flex-shrink: 0; background: #1E293B;
+      border-right: 1px solid #334155; padding: 20px 0;
+    }
+    .d2 .sidebar-logo { padding: 0 20px 20px; font-size: 16px; font-weight: 700; color: #1D6AE5; border-bottom: 1px solid #334155; margin-bottom: 12px; }
+    .d2 .nav-item { padding: 9px 20px; display: flex; align-items: center; gap: 10px; font-size: 13px; color: #94A3B8; cursor: pointer; transition: all 150ms; }
+    .d2 .nav-item:hover { background: #0F172A; color: #F1F5F9; }
+    .d2 .nav-item.active { background: rgba(29,106,229,0.15); color: #60A5FA; border-left: 3px solid #1D6AE5; font-weight: 600; }
+    .d2 .nav-badge { margin-left: auto; background: #DC2626; color: #fff; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; }
+
+    .d2 .content { flex: 1; overflow-y: auto; padding: 24px; }
+
+    .d2 .briefing {
+      background: #1E293B; border: 1px solid #334155; border-left: 4px solid #1D6AE5;
+      border-radius: 10px; padding: 20px 24px; margin-bottom: 20px;
+      display: flex; align-items: flex-start; gap: 24px;
+    }
+    .d2 .briefing-title { font-size: 15px; font-weight: 700; color: #F1F5F9; margin-bottom: 12px; }
+    .d2 .briefing-stats { display: flex; gap: 20px; flex-wrap: wrap; }
+    .d2 .bstat { display: flex; flex-direction: column; gap: 2px; }
+    .d2 .bstat-num { font-size: 22px; font-weight: 700; }
+    .d2 .bstat-label { font-size: 11px; color: #64748B; }
+    .d2 .bstat.success .bstat-num { color: #22C55E; }
+    .d2 .bstat.danger .bstat-num { color: #EF4444; }
+    .d2 .bstat.neutral .bstat-num { color: #F1F5F9; }
+    .d2 .briefing-actions { margin-left: auto; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+    .d2 .btn-primary { background: #EF4444; color: #fff; border: none; border-radius: 7px; padding: 8px 16px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .d2 .btn-secondary { background: rgba(34,197,94,0.15); color: #22C55E; border: 1px solid rgba(34,197,94,0.3); border-radius: 7px; padding: 8px 16px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .d2 .btn-tertiary { background: rgba(29,106,229,0.15); color: #60A5FA; border: 1px solid rgba(29,106,229,0.3); border-radius: 7px; padding: 8px 16px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+
+    .d2 .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+    .d2 .metric-card { background: #1E293B; border: 1px solid #334155; border-radius: 10px; padding: 20px; }
+    .d2 .metric-label { font-size: 12px; color: #64748B; font-weight: 500; margin-bottom: 8px; }
+    .d2 .metric-value { font-size: 28px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+    .d2 .metric-delta.up { color: #22C55E; font-size: 12px; }
+    .d2 .metric-delta.down { color: #EF4444; font-size: 12px; }
+    .d2 .metric-delta.warn { color: #F59E0B; font-size: 12px; }
+    .d2 .sparkline { margin-top: 12px; display: flex; align-items: flex-end; gap: 3px; height: 32px; }
+    .d2 .spark-bar { width: 8px; border-radius: 2px; background: #334155; }
+    .d2 .spark-bar.highlight { background: #1D6AE5; }
+
+    .d2 .lead-section { background: #1E293B; border: 1px solid #334155; border-radius: 10px; overflow: hidden; }
+    .d2 .lead-header { padding: 16px 20px; border-bottom: 1px solid #334155; display: flex; align-items: center; gap: 12px; }
+    .d2 .lead-title { font-size: 14px; font-weight: 600; }
+    .d2 .lead-count { background: rgba(239,68,68,0.2); color: #EF4444; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+    .d2 .lead-row { padding: 14px 20px; border-bottom: 1px solid #1E293B; display: flex; align-items: center; gap: 12px; }
+    .d2 .lead-row:hover { background: #0F172A; }
+    .d2 .badge { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 5px; flex-shrink: 0; }
+    .d2 .badge.hot { background: rgba(239,68,68,0.2); color: #EF4444; }
+    .d2 .badge.warm { background: rgba(249,115,22,0.2); color: #FB923C; }
+    .d2 .lead-name { font-size: 13px; font-weight: 600; flex: 1; }
+    .d2 .lead-reason { font-size: 12px; color: #64748B; flex: 2; }
+    .d2 .lead-time { font-size: 11px; color: #475569; flex-shrink: 0; }
+    .d2 .lead-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .d2 .act-btn { padding: 5px 10px; border-radius: 5px; border: 1px solid #334155; background: transparent; font-size: 11px; font-weight: 500; color: #94A3B8; cursor: pointer; white-space: nowrap; }
+    .d2 .act-btn:hover { border-color: #1D6AE5; color: #60A5FA; }
+    .d2 .act-btn.primary { background: #1D6AE5; border-color: #1D6AE5; color: #fff; }
+
+
+    /* ════════════════════════════════════════
+       DIRECTION 3 — "Compact Power User"
+       Denser layout, more data per screen
+    ════════════════════════════════════════ */
+    .d3 { background: #F8F9FC; color: #0F172A; }
+
+    .d3 .shell { display: flex; height: calc(100vh - 56px); }
+
+    .d3 .sidebar {
+      width: 180px; flex-shrink: 0; background: #1E293B;
+      padding: 16px 0; display: flex; flex-direction: column;
+    }
+    .d3 .sidebar-logo { padding: 0 16px 16px; font-size: 13px; font-weight: 700; color: #60A5FA; border-bottom: 1px solid #334155; margin-bottom: 8px; }
+    .d3 .nav-item { padding: 7px 16px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: #94A3B8; cursor: pointer; }
+    .d3 .nav-item:hover { background: #0F172A; color: #F1F5F9; }
+    .d3 .nav-item.active { background: rgba(29,106,229,0.2); color: #60A5FA; border-left: 2px solid #1D6AE5; font-weight: 600; }
+    .d3 .nav-badge { margin-left: auto; background: #EF4444; color: #fff; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 8px; }
+
+    .d3 .content { flex: 1; overflow-y: auto; padding: 16px; }
+
+    .d3 .briefing {
+      background: #fff; border: 1px solid #E2E8F0; border-top: 3px solid #1D6AE5;
+      border-radius: 8px; padding: 14px 16px; margin-bottom: 14px;
+    }
+    .d3 .briefing-inner { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+    .d3 .briefing-title { font-size: 13px; font-weight: 700; color: #0F172A; flex-shrink: 0; }
+    .d3 .bstat-row { display: flex; gap: 16px; align-items: center; }
+    .d3 .bstat-chip { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+    .d3 .bstat-chip .num { font-weight: 700; font-size: 16px; }
+    .d3 .bstat-chip.success .num { color: #16A34A; }
+    .d3 .bstat-chip.danger .num { color: #DC2626; }
+    .d3 .briefing-btns { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+    .d3 .chip-btn { padding: 5px 10px; border-radius: 5px; font-size: 11px; font-weight: 600; cursor: pointer; border: none; white-space: nowrap; }
+    .d3 .chip-btn.red { background: #FEF2F2; color: #DC2626; }
+    .d3 .chip-btn.green { background: #F0FDF4; color: #16A34A; }
+    .d3 .chip-btn.blue { background: #EFF6FF; color: #1D6AE5; }
+
+    .d3 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .d3 .metric-card { background: #fff; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px; }
+    .d3 .metric-label { font-size: 11px; color: #64748B; margin-bottom: 4px; }
+    .d3 .metric-value { font-size: 24px; font-weight: 700; line-height: 1; }
+    .d3 .metric-delta { font-size: 11px; margin-top: 2px; }
+    .d3 .metric-delta.up { color: #16A34A; }
+    .d3 .metric-delta.down { color: #DC2626; }
+    .d3 .metric-delta.warn { color: #D97706; }
+    .d3 .sparkline { margin-top: 8px; display: flex; align-items: flex-end; gap: 2px; height: 24px; }
+    .d3 .spark-bar { width: 6px; border-radius: 2px; background: #E2E8F0; }
+    .d3 .spark-bar.highlight { background: #1D6AE5; }
+
+    .d3 .lead-section { background: #fff; border: 1px solid #E2E8F0; border-radius: 8px; overflow: hidden; }
+    .d3 .lead-header { padding: 10px 16px; border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; }
+    .d3 .lead-count { background: #FEF2F2; color: #DC2626; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 8px; }
+    .d3 .lead-row { padding: 9px 16px; border-bottom: 1px solid #F8F9FC; display: flex; align-items: center; gap: 8px; font-size: 12px; }
+    .d3 .lead-row:hover { background: #F8F9FC; }
+    .d3 .badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; }
+    .d3 .badge.hot { background: #FEF2F2; color: #DC2626; }
+    .d3 .badge.warm { background: #FFF7ED; color: #EA580C; }
+    .d3 .lead-name { font-weight: 600; flex: 1; min-width: 80px; }
+    .d3 .lead-reason { color: #64748B; flex: 2; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .d3 .lead-time { color: #94A3B8; font-size: 10px; flex-shrink: 0; }
+    .d3 .lead-actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .d3 .act-btn { padding: 3px 8px; border-radius: 4px; border: 1px solid #E2E8F0; background: #fff; font-size: 10px; color: #475569; cursor: pointer; white-space: nowrap; }
+    .d3 .act-btn.primary { background: #1D6AE5; border-color: #1D6AE5; color: #fff; }
+
+
+    /* ════════════════════════════════════════
+       DIRECTION 4 — "Card-First Focus"
+       Large cards, bold hierarchy, visual breathing room
+    ════════════════════════════════════════ */
+    .d4 { background: #EFF6FF; color: #0F172A; }
+
+    .d4 .topbar {
+      background: #1D6AE5; height: 56px; display: flex; align-items: center;
+      padding: 0 24px; gap: 16px; flex-shrink: 0;
+    }
+    .d4 .topbar-logo { font-size: 16px; font-weight: 700; color: #fff; }
+    .d4 .topbar-search {
+      flex: 1; max-width: 400px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 8px; padding: 7px 12px; font-size: 13px; color: rgba(255,255,255,0.8);
+    }
+    .d4 .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+    .d4 .topbar-bell { color: rgba(255,255,255,0.8); position: relative; cursor: pointer; font-size: 18px; }
+    .d4 .bell-badge { position: absolute; top: -4px; right: -4px; background: #DC2626; color: #fff; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 8px; }
+    .d4 .topbar-avatar { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.3); color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+
+    .d4 .subnav {
+      background: #fff; border-bottom: 1px solid #BFDBFE; padding: 0 24px;
+      display: flex; gap: 4px;
+    }
+    .d4 .subnav-item { padding: 10px 16px; font-size: 13px; color: #64748B; cursor: pointer; border-bottom: 2px solid transparent; font-weight: 500; }
+    .d4 .subnav-item.active { color: #1D6AE5; border-bottom-color: #1D6AE5; font-weight: 600; }
+    .d4 .subnav-badge { display: inline-block; margin-left: 6px; background: #FEF2F2; color: #DC2626; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 8px; }
+
+    .d4 .content { padding: 28px 24px; overflow-y: auto; height: calc(100vh - 56px - 41px); }
+
+    .d4 .briefing {
+      background: #fff; border-radius: 12px; padding: 24px 28px; margin-bottom: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(29,106,229,0.08);
+      border-top: 4px solid #1D6AE5;
+    }
+    .d4 .briefing-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+    .d4 .briefing-zones { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+    .d4 .zone-card { border-radius: 10px; padding: 16px; }
+    .d4 .zone-card.neutral { background: #F8F9FC; border: 1px solid #E2E8F0; }
+    .d4 .zone-card.success { background: #F0FDF4; border: 1px solid #BBF7D0; }
+    .d4 .zone-card.danger { background: #FEF2F2; border: 1px solid #FECACA; }
+    .d4 .zone-title { font-size: 11px; font-weight: 600; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .d4 .zone-card.success .zone-title { color: #16A34A; }
+    .d4 .zone-card.danger .zone-title { color: #DC2626; }
+    .d4 .zone-num { font-size: 32px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+    .d4 .zone-card.success .zone-num { color: #16A34A; }
+    .d4 .zone-card.danger .zone-num { color: #DC2626; }
+    .d4 .zone-sub { font-size: 12px; color: #64748B; margin-bottom: 12px; }
+    .d4 .zone-breakdown { font-size: 11px; color: #64748B; margin-bottom: 12px; line-height: 1.7; }
+    .d4 .zone-btn { padding: 8px 14px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; width: 100%; }
+    .d4 .zone-card.success .zone-btn { background: #16A34A; color: #fff; }
+    .d4 .zone-card.danger .zone-btn { background: #DC2626; color: #fff; }
+    .d4 .zone-card.neutral .zone-btn { background: #1D6AE5; color: #fff; }
+
+    .d4 .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+    .d4 .metric-card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border: 1px solid #E2E8F0; }
+    .d4 .metric-label { font-size: 12px; color: #64748B; font-weight: 500; margin-bottom: 10px; }
+    .d4 .metric-value { font-size: 32px; font-weight: 700; line-height: 1; margin-bottom: 6px; }
+    .d4 .metric-delta { font-size: 12px; }
+    .d4 .metric-delta.up { color: #16A34A; }
+    .d4 .metric-delta.down { color: #DC2626; }
+    .d4 .metric-delta.warn { color: #D97706; }
+    .d4 .sparkline { margin-top: 14px; display: flex; align-items: flex-end; gap: 4px; height: 36px; }
+    .d4 .spark-bar { width: 10px; border-radius: 3px; background: #BFDBFE; }
+    .d4 .spark-bar.highlight { background: #1D6AE5; }
+
+
+    /* ── Labels ── */
+    .direction-label {
+      position: fixed; bottom: 16px; right: 16px; z-index: 200;
+      background: #1E293B; border: 1px solid #334155;
+      border-radius: 8px; padding: 10px 14px; font-size: 11px; color: #94A3B8;
+      line-height: 1.5; pointer-events: none;
+    }
+    .direction-label strong { color: #F1F5F9; display: block; font-size: 13px; margin-bottom: 2px; }
+  </style>
+</head>
+<body>
+
+<!-- ── Navigation ── -->
+<nav class="main-nav">
+  <h1>Drive Insight — Design Directions</h1>
+  <button class="dir-btn active" onclick="show('d1',this)">Direction 1: Monday-Style Command</button>
+  <button class="dir-btn" onclick="show('d2',this)">Direction 2: Dark Command Centre</button>
+  <button class="dir-btn" onclick="show('d3',this)">Direction 3: Compact Power User</button>
+  <button class="dir-btn" onclick="show('d4',this)">Direction 4: Card-First Focus</button>
+</nav>
+
+<!-- ════════════════════════════════════════
+     DIRECTION 1
+════════════════════════════════════════ -->
+<div class="page d1 active" id="d1">
+  <!-- Top bar -->
+  <div class="d1 topbar" style="position:sticky;top:56px;z-index:10;">
+    <div class="d1 search">🔍 Search leads, customers, vehicles...</div>
+    <div class="d1 bell" style="margin-left:auto;font-size:18px;">🔔<span class="d1 bell-badge">4</span></div>
+    <div class="d1 avatar">TC</div>
+    <span style="font-size:12px;color:#64748B;">Manager</span>
+  </div>
+  <div class="d1 shell">
+    <!-- Sidebar -->
+    <div class="d1 sidebar">
+      <div class="d1 sidebar-logo">Drive Insight</div>
+      <div class="d1 nav-item active"><span class="icon">📊</span> Overview</div>
+      <div class="d1 nav-item"><span class="icon">💬</span> Conversations <span class="d1 nav-badge">4</span></div>
+      <div class="d1 nav-item"><span class="icon">🎯</span> Leads</div>
+      <div class="d1 nav-item"><span class="icon">🗓️</span> Bookings</div>
+      <div class="d1 nav-item"><span class="icon">📈</span> Analytics</div>
+      <div class="d1 nav-item"><span class="icon">⚙️</span> Settings</div>
+    </div>
+    <!-- Content -->
+    <div class="d1 content">
+      <!-- Morning Briefing -->
+      <div class="d1 briefing">
+        <div style="flex:1">
+          <div class="d1 briefing-title">🌅 While you were away...</div>
+          <div class="d1 briefing-stats">
+            <div class="d1 bstat neutral"><div class="d1 bstat-num">12</div><div class="d1 bstat-label">New leads</div></div>
+            <div class="d1 bstat success"><div class="d1 bstat-num">8</div><div class="d1 bstat-label">AI automated<br><span style="font-size:10px;color:#64748B;">5 bookings · 3 qualified</span></div></div>
+            <div class="d1 bstat danger"><div class="d1 bstat-num">4</div><div class="d1 bstat-label">Need attention<br><span style="font-size:10px;color:#64748B;">2 HOT · 2 WARM</span></div></div>
+          </div>
+        </div>
+        <div class="d1 briefing-actions">
+          <button class="d1 btn-primary">⚠️ Resolve 4 Flagged Leads →</button>
+          <button class="d1 btn-secondary">✅ Confirm 5 Bookings →</button>
+          <button class="d1 btn-tertiary">📋 Assign 3 Qualified Leads →</button>
+        </div>
+      </div>
+      <!-- Metrics -->
+      <div class="d1 metric-grid">
+        <div class="d1 metric-card">
+          <div class="d1 metric-label">Automation Rate</div>
+          <div class="d1 metric-value" style="color:#D97706;">67%</div>
+          <div class="d1 metric-delta warn">↓ 5% from last week</div>
+          <div class="d1 sparkline">
+            <div class="d1 spark-bar" style="height:60%"></div>
+            <div class="d1 spark-bar" style="height:75%"></div>
+            <div class="d1 spark-bar" style="height:80%"></div>
+            <div class="d1 spark-bar" style="height:70%"></div>
+            <div class="d1 spark-bar" style="height:65%"></div>
+            <div class="d1 spark-bar" style="height:72%"></div>
+            <div class="d1 spark-bar highlight" style="height:67%"></div>
+          </div>
+        </div>
+        <div class="d1 metric-card">
+          <div class="d1 metric-label">New Leads (7 days)</div>
+          <div class="d1 metric-value" style="color:#0F172A;">84</div>
+          <div class="d1 metric-delta up">↑ 12% from last week</div>
+          <div class="d1 sparkline">
+            <div class="d1 spark-bar" style="height:50%"></div>
+            <div class="d1 spark-bar" style="height:65%"></div>
+            <div class="d1 spark-bar" style="height:55%"></div>
+            <div class="d1 spark-bar" style="height:80%"></div>
+            <div class="d1 spark-bar" style="height:70%"></div>
+            <div class="d1 spark-bar" style="height:85%"></div>
+            <div class="d1 spark-bar highlight" style="height:90%"></div>
+          </div>
+        </div>
+        <div class="d1 metric-card">
+          <div class="d1 metric-label">Bookings Created (AI)</div>
+          <div class="d1 metric-value" style="color:#16A34A;">23</div>
+          <div class="d1 metric-delta up">↑ 8% from last week</div>
+          <div class="d1 sparkline">
+            <div class="d1 spark-bar" style="height:55%"></div>
+            <div class="d1 spark-bar" style="height:60%"></div>
+            <div class="d1 spark-bar" style="height:70%"></div>
+            <div class="d1 spark-bar" style="height:65%"></div>
+            <div class="d1 spark-bar" style="height:80%"></div>
+            <div class="d1 spark-bar" style="height:75%"></div>
+            <div class="d1 spark-bar highlight" style="height:85%"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Leads Needing Attention -->
+      <div class="d1 lead-section">
+        <div class="d1 lead-header">
+          <span class="d1 lead-title">⚠️ Needs Attention</span>
+          <span class="d1 lead-count">4 leads</span>
+          <span style="margin-left:auto;font-size:12px;color:#64748B;">Sort: HOT first</span>
+        </div>
+        <div class="d1 lead-row">
+          <span class="d1 badge hot">🔥 HOT</span>
+          <span class="d1 lead-name">John Smith</span>
+          <span class="d1 lead-reason">Asked about trade-in policy, AI couldn't provide estimate</span>
+          <span class="d1 lead-time">2h ago</span>
+          <div class="d1 lead-actions">
+            <button class="d1 act-btn primary">Open ManyChat</button>
+            <button class="d1 act-btn">📞 Call</button>
+            <button class="d1 act-btn">Assign ▼</button>
+          </div>
+        </div>
+        <div class="d1 lead-row">
+          <span class="d1 badge hot">🔥 HOT</span>
+          <span class="d1 lead-name">Sarah Lee</span>
+          <span class="d1 lead-reason">Pricing question, AI no response — customer waiting</span>
+          <span class="d1 lead-time">45m ago</span>
+          <div class="d1 lead-actions">
+            <button class="d1 act-btn primary">Open ManyChat</button>
+            <button class="d1 act-btn">📞 Call</button>
+            <button class="d1 act-btn">Assign ▼</button>
+          </div>
+        </div>
+        <div class="d1 lead-row">
+          <span class="d1 badge warm">🌡️ WARM</span>
+          <span class="d1 lead-name">Mike Pretorius</span>
+          <span class="d1 lead-reason">General inquiry, follow-up not sent — customer idle</span>
+          <span class="d1 lead-time">3h ago</span>
+          <div class="d1 lead-actions">
+            <button class="d1 act-btn primary">Open ManyChat</button>
+            <button class="d1 act-btn">Assign ▼</button>
+            <button class="d1 act-btn">Mark Lost ▼</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     DIRECTION 2
+════════════════════════════════════════ -->
+<div class="page d2" id="d2">
+  <div class="d2 shell">
+    <div class="d2 sidebar">
+      <div class="d2 sidebar-logo">Drive Insight</div>
+      <div class="d2 nav-item active">📊 Overview</div>
+      <div class="d2 nav-item">💬 Conversations <span class="d2 nav-badge">4</span></div>
+      <div class="d2 nav-item">🎯 Leads</div>
+      <div class="d2 nav-item">🗓️ Bookings</div>
+      <div class="d2 nav-item">📈 Analytics</div>
+      <div class="d2 nav-item">⚙️ Settings</div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+      <!-- Topbar -->
+      <div style="height:56px;background:#1E293B;border-bottom:1px solid #334155;display:flex;align-items:center;padding:0 24px;gap:12px;flex-shrink:0;">
+        <div style="flex:1;max-width:400px;background:#0F172A;border:1px solid #334155;border-radius:8px;padding:7px 12px;font-size:13px;color:#475569;">🔍 Search...</div>
+        <div style="margin-left:auto;position:relative;font-size:18px;cursor:pointer;">🔔<span style="position:absolute;top:-4px;right:-4px;background:#DC2626;color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:8px;">4</span></div>
+        <div style="width:32px;height:32px;border-radius:50%;background:#1D6AE5;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">TC</div>
+      </div>
+      <div class="d2 content">
+        <div class="d2 briefing">
+          <div style="flex:1">
+            <div class="d2 briefing-title">🌅 While you were away...</div>
+            <div class="d2 briefing-stats">
+              <div class="d2 bstat neutral"><div class="d2 bstat-num">12</div><div class="d2 bstat-label">New leads</div></div>
+              <div class="d2 bstat success"><div class="d2 bstat-num">8</div><div class="d2 bstat-label">AI automated<br><span style="font-size:10px;color:#475569;">5 bookings · 3 qualified</span></div></div>
+              <div class="d2 bstat danger"><div class="d2 bstat-num">4</div><div class="d2 bstat-label">Need attention<br><span style="font-size:10px;color:#475569;">2 HOT · 2 WARM</span></div></div>
+            </div>
+          </div>
+          <div class="d2 briefing-actions">
+            <button class="d2 btn-primary">⚠️ Resolve 4 Flagged →</button>
+            <button class="d2 btn-secondary">✅ Confirm 5 Bookings →</button>
+            <button class="d2 btn-tertiary">📋 Assign 3 Leads →</button>
+          </div>
+        </div>
+        <div class="d2 metric-grid">
+          <div class="d2 metric-card">
+            <div class="d2 metric-label">Automation Rate</div>
+            <div class="d2 metric-value" style="color:#F59E0B;">67%</div>
+            <div class="d2 metric-delta warn">↓ 5% from last week</div>
+            <div class="d2 sparkline">
+              <div class="d2 spark-bar" style="height:60%"></div><div class="d2 spark-bar" style="height:75%"></div><div class="d2 spark-bar" style="height:80%"></div><div class="d2 spark-bar" style="height:70%"></div><div class="d2 spark-bar" style="height:65%"></div><div class="d2 spark-bar" style="height:72%"></div><div class="d2 spark-bar highlight" style="height:67%"></div>
+            </div>
+          </div>
+          <div class="d2 metric-card">
+            <div class="d2 metric-label">New Leads (7 days)</div>
+            <div class="d2 metric-value" style="color:#F1F5F9;">84</div>
+            <div class="d2 metric-delta up">↑ 12% from last week</div>
+            <div class="d2 sparkline">
+              <div class="d2 spark-bar" style="height:50%"></div><div class="d2 spark-bar" style="height:65%"></div><div class="d2 spark-bar" style="height:55%"></div><div class="d2 spark-bar" style="height:80%"></div><div class="d2 spark-bar" style="height:70%"></div><div class="d2 spark-bar" style="height:85%"></div><div class="d2 spark-bar highlight" style="height:90%"></div>
+            </div>
+          </div>
+          <div class="d2 metric-card">
+            <div class="d2 metric-label">Bookings (AI)</div>
+            <div class="d2 metric-value" style="color:#22C55E;">23</div>
+            <div class="d2 metric-delta up">↑ 8% from last week</div>
+            <div class="d2 sparkline">
+              <div class="d2 spark-bar" style="height:55%"></div><div class="d2 spark-bar" style="height:60%"></div><div class="d2 spark-bar" style="height:70%"></div><div class="d2 spark-bar" style="height:65%"></div><div class="d2 spark-bar" style="height:80%"></div><div class="d2 spark-bar" style="height:75%"></div><div class="d2 spark-bar highlight" style="height:85%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="d2 lead-section">
+          <div class="d2 lead-header"><span class="d2 lead-title">⚠️ Needs Attention</span><span class="d2 lead-count">4 leads</span><span style="margin-left:auto;font-size:12px;color:#475569;">HOT first</span></div>
+          <div class="d2 lead-row">
+            <span class="d2 badge hot">🔥 HOT</span>
+            <span class="d2 lead-name">John Smith</span>
+            <span class="d2 lead-reason">Asked about trade-in policy, AI couldn't answer</span>
+            <span class="d2 lead-time">2h ago</span>
+            <div class="d2 lead-actions">
+              <button class="d2 act-btn primary">Open ManyChat</button>
+              <button class="d2 act-btn">📞 Call</button>
+              <button class="d2 act-btn">Assign ▼</button>
+            </div>
+          </div>
+          <div class="d2 lead-row">
+            <span class="d2 badge hot">🔥 HOT</span>
+            <span class="d2 lead-name">Sarah Lee</span>
+            <span class="d2 lead-reason">Pricing question, customer waiting 45 min</span>
+            <span class="d2 lead-time">45m ago</span>
+            <div class="d2 lead-actions">
+              <button class="d2 act-btn primary">Open ManyChat</button>
+              <button class="d2 act-btn">📞 Call</button>
+              <button class="d2 act-btn">Assign ▼</button>
+            </div>
+          </div>
+          <div class="d2 lead-row">
+            <span class="d2 badge warm">🌡️ WARM</span>
+            <span class="d2 lead-name">Mike Pretorius</span>
+            <span class="d2 lead-reason">General inquiry, follow-up not sent</span>
+            <span class="d2 lead-time">3h ago</span>
+            <div class="d2 lead-actions">
+              <button class="d2 act-btn primary">Open ManyChat</button>
+              <button class="d2 act-btn">Assign ▼</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     DIRECTION 3
+════════════════════════════════════════ -->
+<div class="page d3" id="d3">
+  <div class="d3 shell">
+    <div class="d3 sidebar">
+      <div class="d3 sidebar-logo">Drive Insight</div>
+      <div class="d3 nav-item active">📊 Overview</div>
+      <div class="d3 nav-item">💬 Conversations <span class="d3 nav-badge">4</span></div>
+      <div class="d3 nav-item">🎯 Leads</div>
+      <div class="d3 nav-item">🗓️ Bookings</div>
+      <div class="d3 nav-item">📈 Analytics</div>
+      <div class="d3 nav-item">⚙️ Settings</div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+      <div style="height:44px;background:#fff;border-bottom:1px solid #E2E8F0;display:flex;align-items:center;padding:0 16px;gap:10px;flex-shrink:0;">
+        <div style="flex:1;max-width:360px;background:#F8F9FC;border:1px solid #E2E8F0;border-radius:6px;padding:5px 10px;font-size:12px;color:#94A3B8;">🔍 Search...</div>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+          <span style="position:relative;font-size:16px;cursor:pointer;">🔔<span style="position:absolute;top:-3px;right:-3px;background:#DC2626;color:#fff;font-size:8px;font-weight:700;padding:1px 3px;border-radius:6px;">4</span></span>
+          <div style="width:28px;height:28px;border-radius:50%;background:#1D6AE5;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;">TC</div>
+        </div>
+      </div>
+      <div class="d3 content">
+        <div class="d3 briefing">
+          <div class="d3 briefing-inner">
+            <div class="d3 briefing-title">🌅 While you were away</div>
+            <div class="d3 bstat-row">
+              <div class="d3 bstat-chip neutral"><span class="num" style="color:#0F172A;">12</span><span>new leads</span></div>
+              <div class="d3 bstat-chip success"><span class="num">8</span><span>automated (5 bookings, 3 qualified)</span></div>
+              <div class="d3 bstat-chip danger"><span class="num">4</span><span>need attention</span></div>
+            </div>
+            <div class="d3 briefing-btns">
+              <button class="d3 chip-btn red">⚠️ 4 Flagged →</button>
+              <button class="d3 chip-btn green">✅ 5 Bookings →</button>
+              <button class="d3 chip-btn blue">📋 3 Leads →</button>
+            </div>
+          </div>
+        </div>
+        <div class="d3 two-col">
+          <div class="d3 metric-card">
+            <div class="d3 metric-label">Automation Rate</div>
+            <div class="d3 metric-value" style="color:#D97706;">67%</div>
+            <div class="d3 metric-delta warn">↓ 5% from last week — monitor</div>
+            <div class="d3 sparkline">
+              <div class="d3 spark-bar" style="height:60%"></div><div class="d3 spark-bar" style="height:75%"></div><div class="d3 spark-bar" style="height:80%"></div><div class="d3 spark-bar" style="height:70%"></div><div class="d3 spark-bar" style="height:65%"></div><div class="d3 spark-bar" style="height:72%"></div><div class="d3 spark-bar highlight" style="height:67%"></div>
+            </div>
+          </div>
+          <div class="d3 metric-card">
+            <div class="d3 metric-label">New Leads (7 days)</div>
+            <div class="d3 metric-value" style="color:#0F172A;">84</div>
+            <div class="d3 metric-delta up">↑ 12% from last week</div>
+            <div class="d3 sparkline">
+              <div class="d3 spark-bar" style="height:50%"></div><div class="d3 spark-bar" style="height:65%"></div><div class="d3 spark-bar" style="height:55%"></div><div class="d3 spark-bar" style="height:80%"></div><div class="d3 spark-bar" style="height:70%"></div><div class="d3 spark-bar" style="height:85%"></div><div class="d3 spark-bar highlight" style="height:90%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="d3 lead-section">
+          <div class="d3 lead-header">⚠️ Needs Attention <span class="d3 lead-count">4</span><span style="margin-left:auto;font-size:10px;color:#64748B;">Filter ▼ · Sort ▼</span></div>
+          <div class="d3 lead-row">
+            <span class="d3 badge hot">🔥 HOT</span>
+            <span class="d3 lead-name">John Smith</span>
+            <span class="d3 lead-reason">Asked about trade-in policy, AI couldn't answer — 2h idle</span>
+            <span class="d3 lead-time">2h ago</span>
+            <div class="d3 lead-actions">
+              <button class="d3 act-btn primary">ManyChat</button>
+              <button class="d3 act-btn">📞</button>
+              <button class="d3 act-btn">Assign ▼</button>
+            </div>
+          </div>
+          <div class="d3 lead-row">
+            <span class="d3 badge hot">🔥 HOT</span>
+            <span class="d3 lead-name">Sarah Lee</span>
+            <span class="d3 lead-reason">Pricing question, customer waiting 45 min</span>
+            <span class="d3 lead-time">45m ago</span>
+            <div class="d3 lead-actions">
+              <button class="d3 act-btn primary">ManyChat</button>
+              <button class="d3 act-btn">📞</button>
+              <button class="d3 act-btn">Assign ▼</button>
+            </div>
+          </div>
+          <div class="d3 lead-row">
+            <span class="d3 badge warm">🌡️ WARM</span>
+            <span class="d3 lead-name">Mike Pretorius</span>
+            <span class="d3 lead-reason">General inquiry, follow-up not sent</span>
+            <span class="d3 lead-time">3h ago</span>
+            <div class="d3 lead-actions">
+              <button class="d3 act-btn primary">ManyChat</button>
+              <button class="d3 act-btn">Assign ▼</button>
+            </div>
+          </div>
+          <div class="d3 lead-row" style="border-bottom:none;">
+            <span class="d3 badge warm">🌡️ WARM</span>
+            <span class="d3 lead-name">Emma van Wyk</span>
+            <span class="d3 lead-reason">Test drive enquiry, no booking created by AI</span>
+            <span class="d3 lead-time">4h ago</span>
+            <div class="d3 lead-actions">
+              <button class="d3 act-btn primary">ManyChat</button>
+              <button class="d3 act-btn">Assign ▼</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     DIRECTION 4
+════════════════════════════════════════ -->
+<div class="page d4" id="d4">
+  <div class="d4 topbar">
+    <div class="d4 topbar-logo">Drive Insight</div>
+    <div class="d4 topbar-search">🔍 Search leads, customers, vehicles...</div>
+    <div class="d4 topbar-right">
+      <div class="d4 topbar-bell">🔔<span class="d4 bell-badge">4</span></div>
+      <div class="d4 topbar-avatar">TC</div>
+    </div>
+  </div>
+  <div class="d4 subnav">
+    <div class="d4 subnav-item active">Overview</div>
+    <div class="d4 subnav-item">Conversations <span class="d4 subnav-badge">4</span></div>
+    <div class="d4 subnav-item">Leads</div>
+    <div class="d4 subnav-item">Bookings</div>
+    <div class="d4 subnav-item">Analytics</div>
+  </div>
+  <div class="d4 content">
+    <!-- Morning Briefing -->
+    <div class="d4 briefing">
+      <div class="d4 briefing-title">🌅 While you were away...</div>
+      <div class="d4 briefing-zones">
+        <div class="d4 zone-card neutral">
+          <div class="d4 zone-title">Total New Leads</div>
+          <div class="d4 zone-num" style="color:#0F172A;">12</div>
+          <div class="d4 zone-sub">via WhatsApp & Messenger</div>
+          <button class="d4 zone-btn">View All Leads →</button>
+        </div>
+        <div class="d4 zone-card success">
+          <div class="d4 zone-title">✅ AI Automated</div>
+          <div class="d4 zone-num">8</div>
+          <div class="d4 zone-breakdown">• 🗓️ 5 bookings created<br>• 📋 3 leads qualified</div>
+          <button class="d4 zone-btn">Review AI Successes →</button>
+        </div>
+        <div class="d4 zone-card danger">
+          <div class="d4 zone-title">⚠️ Need Attention</div>
+          <div class="d4 zone-num">4</div>
+          <div class="d4 zone-breakdown">• 🔥 2 HOT (pricing questions)<br>• 🌡️ 2 WARM (general inquiries)</div>
+          <button class="d4 zone-btn">Resolve Now →</button>
+        </div>
+      </div>
+    </div>
+    <!-- Metrics -->
+    <div class="d4 metric-grid">
+      <div class="d4 metric-card">
+        <div class="d4 metric-label">Automation Rate</div>
+        <div class="d4 metric-value" style="color:#D97706;">67%</div>
+        <div class="d4 metric-delta warn">↓ 5% from last week — monitor</div>
+        <div class="d4 sparkline">
+          <div class="d4 spark-bar" style="height:60%"></div><div class="d4 spark-bar" style="height:75%"></div><div class="d4 spark-bar" style="height:80%"></div><div class="d4 spark-bar" style="height:70%"></div><div class="d4 spark-bar" style="height:65%"></div><div class="d4 spark-bar" style="height:72%"></div><div class="d4 spark-bar highlight" style="height:67%"></div>
+        </div>
+      </div>
+      <div class="d4 metric-card">
+        <div class="d4 metric-label">New Leads (7 days)</div>
+        <div class="d4 metric-value" style="color:#0F172A;">84</div>
+        <div class="d4 metric-delta up">↑ 12% from last week</div>
+        <div class="d4 sparkline">
+          <div class="d4 spark-bar" style="height:50%"></div><div class="d4 spark-bar" style="height:65%"></div><div class="d4 spark-bar" style="height:55%"></div><div class="d4 spark-bar" style="height:80%"></div><div class="d4 spark-bar" style="height:70%"></div><div class="d4 spark-bar" style="height:85%"></div><div class="d4 spark-bar highlight" style="height:90%"></div>
+        </div>
+      </div>
+      <div class="d4 metric-card">
+        <div class="d4 metric-label">Bookings Created (AI)</div>
+        <div class="d4 metric-value" style="color:#16A34A;">23</div>
+        <div class="d4 metric-delta up">↑ 8% from last week</div>
+        <div class="d4 sparkline">
+          <div class="d4 spark-bar" style="height:55%"></div><div class="d4 spark-bar" style="height:60%"></div><div class="d4 spark-bar" style="height:70%"></div><div class="d4 spark-bar" style="height:65%"></div><div class="d4 spark-bar" style="height:80%"></div><div class="d4 spark-bar" style="height:75%"></div><div class="d4 spark-bar highlight" style="height:85%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── Label ── -->
+<div class="direction-label" id="dir-label">
+  <strong>Direction 1: Monday-Style Command</strong>
+  Light mode · Left sidebar · Card grid · Familiar CRM feel
+</div>
+
+<script>
+  const labels = {
+    d1: { title: 'Direction 1: Monday-Style Command', sub: 'Light mode · Left sidebar · Card grid · Familiar CRM feel' },
+    d2: { title: 'Direction 2: Dark Command Centre', sub: 'Dark mode · Left sidebar · High contrast · Premium feel' },
+    d3: { title: 'Direction 3: Compact Power User', sub: 'Light mode · Dark sidebar · Dense layout · More data per screen' },
+    d4: { title: 'Direction 4: Card-First Focus', sub: 'Light mode · Blue topbar + subnav · Large cards · Bold hierarchy' },
+  };
+  function show(id, btn) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    btn.classList.add('active');
+    const l = labels[id];
+    document.getElementById('dir-label').innerHTML = `<strong>${l.title}</strong>${l.sub}`;
+  }
+</script>
+</body>
+</html>
