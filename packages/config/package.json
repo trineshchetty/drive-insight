@@ -1,0 +1,11 @@
+{
+  "name": "@drive-insight/config",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./eslint": "./eslint-config/index.js",
+    "./typescript/base": "./typescript-config/base.json",
+    "./typescript/nextjs": "./typescript-config/nextjs.json",
+    "./typescript/nestjs": "./typescript-config/nestjs.json"
+  }
+}

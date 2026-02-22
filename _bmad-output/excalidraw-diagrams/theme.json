@@ -1,0 +1,23 @@
+{
+  "name": "Minimal DFD",
+  "colors": {
+    "process": {
+      "fill": "#f5f5f5",
+      "stroke": "#616161"
+    },
+    "datastore": {
+      "fill": "#eeeeee",
+      "stroke": "#616161"
+    },
+    "external": {
+      "fill": "#e0e0e0",
+      "stroke": "#616161"
+    },
+    "arrow": {
+      "stroke": "#616161"
+    },
+    "text": {
+      "stroke": "#1e1e1e"
+    }
+  }
+}

@@ -1,0 +1,66 @@
+# Docker Ignore File
+# Excludes files/directories from Docker build context
+# Speeds up builds and reduces image size
+
+# Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# Build outputs
+.next
+.turbo
+dist
+build
+out
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.*.local
+
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# IDE and editors
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+coverage
+.nyc_output
+*.log
+
+# Documentation
+README.md
+CHANGELOG.md
+docs
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+
+# Supabase local data (not needed in containers)
+supabase/.temp
+supabase/.branches
+
+# Docker files (not needed in image)
+docker-compose.yml
+docker-compose.*.yml
+Dockerfile
+.dockerignore
+
+# BMAD artifacts (planning documents not needed in runtime)
+_bmad
+_bmad-output
