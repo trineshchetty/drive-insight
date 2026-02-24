@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Slide 7 - The Solution</title>
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet"/>
+<style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0F172A; /* Slightly lighter than previous slides for "Solution" feel */
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            width: 1080px;
+            height: 1080px;
+        }
+
+        .slide-container {
+            width: 1080px;
+            height: 1080px;
+            position: relative;
+            background-color: #0F172A;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+
+        /* Subtle Hex Pattern for structure/order */
+        .bg-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l25.98 15v30L30 60 4.02 45V15z' fill-opacity='0.03' fill='%23ffffff' fill-rule='evenodd'/%3E%3C/svg%3E");
+            z-index: 0;
+        }
+
+        .content-wrapper {
+            position: relative;
+            z-index: 10;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 80px 80px 160px 80px; /* Extra bottom padding for footer bar */
+        }
+
+        /* Header */
+        .header-section {
+            margin-bottom: 50px;
+            border-left: 8px solid #00F0FF;
+            padding-left: 30px;
+        }
+
+        .eyebrow {
+            color: #00F0FF;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 72px;
+            line-height: 1.1;
+            font-weight: 700;
+            color: white;
+            margin: 0;
+        }
+
+        /* Manifesto Section */
+        .manifesto-box {
+            background-color: rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 50px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .manifesto-line {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 36px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .line-negative {
+            color: #64748B;
+            text-decoration: line-through;
+            text-decoration-color: #FF2D2D;
+            text-decoration-thickness: 3px;
+        }
+
+        .line-positive {
+            color: #00F0FF;
+        }
+
+        .line-icon {
+            font-size: 32px;
+            width: 40px;
+            text-align: center;
+        }
+
+        /* Pillars Grid */
+        .pillars-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            flex: 1;
+        }
+
+        .pillar-card {
+            background-color: #1E293B;
+            border-top: 4px solid #00F0FF;
+            border-radius: 0 0 12px 12px;
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pillar-card:hover {
+            transform: translateY(-5px);
+            transition: transform 0.3s ease;
+        }
+
+        .pillar-icon-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: rgba(0, 240, 255, 0.1);
+            color: #00F0FF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(0, 240, 255, 0.3);
+        }
+
+        .pillar-title {
+            color: white;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            line-height: 1.2;
+        }
+
+        .pillar-desc {
+            color: #CBD5E1;
+            font-size: 16px;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        /* Sub-text */
+        .sub-text-container {
+            margin-top: 40px;
+            text-align: center;
+            padding: 20px;
+            background-color: rgba(255, 45, 45, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 45, 45, 0.2);
+        }
+
+        .sub-text {
+            color: #F87171;
+            font-weight: 600;
+            font-size: 20px;
+            margin: 0;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        /* Footer CTA Bar */
+        .footer-cta {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 140px;
+            background-color: #00F0FF;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 80px;
+            box-shadow: 0 -10px 40px rgba(0, 240, 255, 0.2);
+            z-index: 20;
+        }
+
+        .cta-text-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .cta-headline {
+            color: #0A0F1E;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 32px;
+            font-weight: 800;
+            margin: 0 0 5px 0;
+            text-transform: uppercase;
+        }
+
+        .cta-sub {
+            color: #1E293B;
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .follow-btn {
+            background-color: #0A0F1E;
+            color: white;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .follow-icon {
+            color: #00F0FF;
+        }
+        
+    </style>
+</head>
+<body>
+<div class="slide-container">
+<!-- Bg Pattern -->
+<div class="bg-pattern"></div>
+<div class="content-wrapper">
+<!-- Header -->
+<div class="header-section">
+<span class="eyebrow">THE SOLUTION</span>
+<h1>Tool-Boundary Controls</h1>
+</div>
+<!-- Manifesto -->
+<div class="manifesto-box">
+<div class="manifesto-line line-negative">
+<div class="line-icon"><i class="fas fa-times-circle" style="color: #64748B;"></i></div>
+<span>Stop trying to filter the input.</span>
+</div>
+<div class="manifesto-line line-positive">
+<div class="line-icon"><i class="fas fa-check-circle"></i></div>
+<span>Start constraining the output.</span>
+</div>
+</div>
+<!-- 3 Pillars -->
+<div class="pillars-grid">
+<!-- Pillar 1 -->
+<div class="pillar-card">
+<div class="pillar-icon-circle">
+<i class="fas fa-lock"></i>
+</div>
+<h3 class="pillar-title">Enforce Schemas</h3>
+<p class="pillar-desc">Force the LLM to output strict JSON schemas. Reject anything that doesn't match the type definition.</p>
+</div>
+<!-- Pillar 2 -->
+<div class="pillar-card">
+<div class="pillar-icon-circle">
+<i class="fas fa-key"></i>
+</div>
+<h3 class="pillar-title">Least-Privilege</h3>
+<p class="pillar-desc">Give the agent its own identity. Never let it run as root or inherit user permissions blindly.</p>
+</div>
+<!-- Pillar 3 -->
+<div class="pillar-card">
+<div class="pillar-icon-circle">
+<i class="fas fa-traffic-light"></i>
+</div>
+<h3 class="pillar-title">Deterministic Gates</h3>
+<p class="pillar-desc">Use traditional code (not AI) to validate actions before execution. Human-in-the-loop for high stakes.</p>
+</div>
+</div>
+<!-- Sub Text -->
+<div class="sub-text-container">
+<p class="sub-text"><i class="fas fa-shield-alt" style="margin-right: 10px;"></i> Core Principle: Treat the LLM as an untrusted component</p>
+</div>
+</div>
+<!-- Footer CTA -->
+<div class="footer-cta">
+<div class="cta-text-group">
+<p class="cta-headline">Secure Your Agent</p>
+<p class="cta-sub">Follow for next week's deep dive on coding deterministic boundaries.</p>
+</div>
+<div class="follow-btn">
+<span>Follow Me</span>
+<i class="fas fa-plus-circle follow-icon"></i>
+</div>
+</div>
+</div>
+</body>
+</html>
