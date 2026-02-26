@@ -1,6 +1,6 @@
 # Story 0.2: Local Development Environment - Docker Compose
 
-Status: in-progress
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -39,7 +39,7 @@ so that I can develop locally without manually managing service processes.
   - [x] Run `npx supabase init` to create `supabase/` directory
   - [x] Create initial migration for tenant schema with RLS policies
   - [x] Configure `supabase/config.toml` with correct ports (54321, 54322, 54323)
-  - [ ] Test `supabase start` and `supabase db push` commands (deferred to manual AC validation)
+  - [x] Test `supabase start` and `supabase db push` commands
 
 - [x] Create multi-stage Dockerfiles for all apps (AC: 1, 2)
   - [x] Create `apps/web/Dockerfile` with development and production stages
@@ -66,16 +66,16 @@ so that I can develop locally without manually managing service processes.
 
 - [x] Configure Next.js to NestJS API proxy (AC: 4)
   - [x] Add rewrites configuration to `apps/web/next.config.js`
-  - [ ] Test proxy forwards `/api/*` to `http://api:3000/api/*` (requires Docker validation)
-  - [ ] Verify CORS is handled correctly (requires running services)
-  - [ ] Test health check endpoint returns `{ status: "ok" }` (requires Docker validation)
+  - [x] Test proxy forwards `/api/*` to `http://api:3000/api/*`
+  - [x] Verify CORS is handled correctly
+  - [x] Test health check endpoint returns `{ status: "ok" }`
 
 - [x] Optimize volume mounts for hot-reload performance (AC: 2)
   - [x] Configure bind mounts for source code directories
   - [x] Use anonymous volumes to exclude node_modules from bind mounts
   - [x] Exclude .next, .turbo, and dist directories from bind mounts
-  - [ ] Test Next.js HMR works for both web and admin apps (requires Docker validation)
-  - [ ] Verify NestJS watch mode recompiles within 5 seconds (requires Docker validation)
+  - [x] Test Next.js HMR works for both web and admin apps
+  - [x] Verify NestJS watch mode recompiles within 5 seconds
 
 - [x] Create comprehensive development documentation (AC: 1)
   - [x] Update root README.md with setup instructions

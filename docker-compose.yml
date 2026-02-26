@@ -2,8 +2,6 @@
 # Story 0.2: Local Development Environment
 # All services with hot-reload enabled
 
-version: '3.8'
-
 services:
   # Supabase PostgreSQL Database
   # Using Supabase CLI to manage the stack is recommended
@@ -19,7 +17,7 @@ services:
       target: development
     container_name: trinstel-auto-ai-api
     ports:
-      - "3001:3000"  # External:Internal
+      - "3005:3000"  # External:Internal
     volumes:
       # Mount source code for hot-reload
       - ./apps/api:/app/apps/api
@@ -35,6 +33,14 @@ services:
       - SUPABASE_URL=http://host.docker.internal:54321
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - JWT_SECRET=${JWT_SECRET}
+      # Logging & Monitoring
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOKI_HOST=${LOKI_HOST}
+      - LOKI_USERNAME=${LOKI_USERNAME}
+      - LOKI_PASSWORD=${LOKI_PASSWORD}
+      - PROMETHEUS_PUSH_GATEWAY=${PROMETHEUS_PUSH_GATEWAY}
+      - PROMETHEUS_USERNAME=${PROMETHEUS_USERNAME}
+      - PROMETHEUS_PASSWORD=${PROMETHEUS_PASSWORD}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
@@ -69,7 +75,7 @@ services:
       - NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
       # API URL for proxy configuration
-      - API_URL=http://api:3001
+      - API_URL=http://api:3005
     depends_on:
       api:
         condition: service_healthy

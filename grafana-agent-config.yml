@@ -1,0 +1,46 @@
+# Grafana Agent Configuration
+# Scrapes metrics from API and ships logs/metrics to Grafana Cloud
+
+server:
+  log_level: info
+
+# Prometheus metrics scraping and remote-write
+metrics:
+  global:
+    scrape_interval: 15s
+    remote_write:
+      - url: ${PROMETHEUS_REMOTE_WRITE_URL}
+        basic_auth:
+          username: ${PROMETHEUS_USERNAME}
+          password: ${PROMETHEUS_PASSWORD}
+
+  configs:
+    - name: drive-insight-metrics
+      scrape_configs:
+        # Scrape API metrics endpoint
+        - job_name: 'drive-insight-api'
+          static_configs:
+            - targets: ['api:3000']
+          metrics_path: '/api/metrics'
+          scrape_interval: 15s
+
+# Loki log aggregation (optional - API already pushes directly via winston-loki)
+# Uncomment if you want Grafana Agent to handle log shipping instead
+# logs:
+#   configs:
+#     - name: drive-insight-logs
+#       clients:
+#         - url: ${LOKI_URL}/loki/api/v1/push
+#           basic_auth:
+#             username: ${LOKI_USERNAME}
+#             password: ${LOKI_PASSWORD}
+#       positions:
+#         filename: /tmp/positions.yaml
+#       scrape_configs:
+#         - job_name: docker-logs
+#           docker_sd_configs:
+#             - host: unix:///var/run/docker.sock
+#               refresh_interval: 5s
+#           relabel_configs:
+#             - source_labels: ['__meta_docker_container_name']
+#               target_label: 'container'

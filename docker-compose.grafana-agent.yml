@@ -1,0 +1,29 @@
+# Grafana Agent for Development Monitoring
+# This file extends docker-compose.yml to add Grafana Agent
+# which scrapes metrics from the API and pushes to Grafana Cloud
+#
+# Usage:
+#   docker-compose -f docker-compose.yml -f docker-compose.grafana-agent.yml up
+
+services:
+  # Grafana Agent - Scrapes metrics and pushes to Grafana Cloud
+  grafana-agent:
+    image: grafana/agent:latest
+    container_name: trinstel-auto-ai-grafana-agent
+    volumes:
+      - ./grafana-agent-config.yml:/etc/agent/agent.yml:ro
+    environment:
+      - PROMETHEUS_REMOTE_WRITE_URL=${PROMETHEUS_PUSH_GATEWAY}
+      - PROMETHEUS_USERNAME=${PROMETHEUS_USERNAME}
+      - PROMETHEUS_PASSWORD=${PROMETHEUS_PASSWORD}
+      - LOKI_URL=${LOKI_HOST}
+      - LOKI_USERNAME=${LOKI_USERNAME}
+      - LOKI_PASSWORD=${LOKI_PASSWORD}
+    command:
+      - -config.file=/etc/agent/agent.yml
+      - -metrics.wal-directory=/tmp/agent/wal
+      - -config.expand-env
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
