@@ -46,7 +46,7 @@ development_status:
   0-1-turborepo-monorepo-initialisation: done
   0-2-local-development-environment-docker-compose: done
   0-3-ci-cd-pipeline-github-actions: deferred
-  0-4-monitoring-observability-setup: in-progress
+  0-4-monitoring-observability-setup: testing
   epic-0-retrospective: optional
 
   # Epic 1: Tenant Authentication & Multi-Tenancy Foundation

@@ -3,7 +3,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { LoggerModule } from './modules/logger';
 import { MetricsModule } from './modules/metrics';
-import { HttpMetricsMiddleware } from './common/middleware';
+import { HttpMetricsMiddleware, TenantMiddleware } from './common/middleware';
 
 @Module({
   imports: [LoggerModule, MetricsModule],
@@ -12,6 +12,10 @@ import { HttpMetricsMiddleware } from './common/middleware';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
+    // Apply tenant middleware first to extract tenant_id
+    consumer.apply(TenantMiddleware).forRoutes('*');
+
+    // Then apply metrics middleware (which will have access to tenantId)
     consumer.apply(HttpMetricsMiddleware).forRoutes('*');
   }
 }
