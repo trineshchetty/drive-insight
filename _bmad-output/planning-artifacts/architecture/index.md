@@ -1,0 +1,25 @@
+# Architecture Decision Document — Drive Insight
+
+## Table of Contents
+
+- [Architecture Decision Document — Drive Insight](#table-of-contents)
+  - [🚨 Critical Decisions Flagged for Deep-Dive](./critical-decisions-flagged-for-deep-dive.md)
+  - [Project Context Analysis](./project-context-analysis.md)
+    - [Requirements Overview](./project-context-analysis.md#requirements-overview)
+    - [Technical Constraints & Dependencies](./project-context-analysis.md#technical-constraints-dependencies)
+    - [Cross-Cutting Concerns Identified](./project-context-analysis.md#cross-cutting-concerns-identified)
+    - [Critical Architectural Decisions to Lock In](./project-context-analysis.md#critical-architectural-decisions-to-lock-in)
+  - [Starter Template Evaluation](./starter-template-evaluation.md)
+    - [Primary Technology Domain](./starter-template-evaluation.md#primary-technology-domain)
+    - [Technical Preferences Established](./starter-template-evaluation.md#technical-preferences-established)
+    - [Selected Starter: Turborepo Monorepo (Custom Setup)](./starter-template-evaluation.md#selected-starter-turborepo-monorepo-custom-setup)
+  - [Core Architectural Decisions](./core-architectural-decisions.md)
+    - [Decision Priority Analysis](./core-architectural-decisions.md#decision-priority-analysis)
+    - [Category 1: Agentic Workflow Layer](./core-architectural-decisions.md#category-1-agentic-workflow-layer)
+    - [Category 2: Authentication & Authorization](./core-architectural-decisions.md#category-2-authentication-authorization)
+    - [Category 3: API Design & Communication Patterns](./core-architectural-decisions.md#category-3-api-design-communication-patterns)
+    - [Category 4: Data Validation & Type Safety](./core-architectural-decisions.md#category-4-data-validation-type-safety)
+    - [Category 5: Monitoring & Observability](./core-architectural-decisions.md#category-5-monitoring-observability)
+    - [Additional Critical Decisions](./core-architectural-decisions.md#additional-critical-decisions)
+    - [Superuser Administration Layer](./core-architectural-decisions.md#superuser-administration-layer)
+    - [Decision Impact Analysis](./core-architectural-decisions.md#decision-impact-analysis)

@@ -1,22 +1,6 @@
----
-stepsCompleted: [1]
-inputDocuments:
-  - drive-insight-prd.md
-  - _bmad-output/planning-artifacts/architecture.md
-  - _bmad-output/planning-artifacts/ux-design-specification.md
----
+# Requirements Inventory
 
-# trinstel-auto-ai - Epic Breakdown
-
-## Overview
-
-This document provides the complete epic and story breakdown for Drive Insight, decomposing the requirements from the PRD, Architecture, and UX Design Specification into implementable stories.
-
----
-
-## Requirements Inventory
-
-### Functional Requirements
+## Functional Requirements
 
 **Tenant Application**
 
@@ -91,7 +75,7 @@ FR-162: Manual data correction capabilities (lead stages, conversation reassignm
 
 ---
 
-### Non-Functional Requirements
+## Non-Functional Requirements
 
 NFR-001: Multi-tenant data isolation via RLS policies; no data leakage between tenants.
 NFR-002: Sub-minute response times for lead ingestion; P50 <500ms, P95 <2s, P99 <5s for AI responses.
@@ -114,7 +98,7 @@ NFR-018: Booking atomicity via SELECT FOR UPDATE within transactions (no double-
 
 ---
 
-### Additional Requirements
+## Additional Requirements
 
 **From Architecture — Starter Template (impacts Epic 0 Story 1):**
 - Turborepo monorepo initialized with pnpm workspaces
@@ -156,14 +140,49 @@ NFR-018: Booking atomicity via SELECT FOR UPDATE within transactions (no double-
 
 ---
 
-### FR Coverage Map
+## FR Coverage Map
 
-{{requirements_coverage_map}}
+| FR | Epic | Brief description |
+|---|---|---|
+| FR-001 | Epic 1 | Tenant isolation via RLS |
+| FR-002 | Epic 1 | Role definitions |
+| FR-003 | Epic 1 | Permission model per role |
+| FR-010 | Epic 2 | ManyChat message ingestion |
+| FR-011 | Epic 2 | Meta Lead Ads ingestion |
+| FR-012 | Epic 2 | SMS ingestion (Twilio) |
+| FR-013 | Epic 2 | Canonical data model normalisation |
+| FR-014 | Epic 2 | Idempotency via external_message_id |
+| FR-020 | Epic 2 | Conversation status machine |
+| FR-021 | Epic 2 | AI agent node/persona per message |
+| FR-022 | Epic 2 | Full transcript display |
+| FR-023 | Epic 3 | Conversation search/filter |
+| FR-030 | Epic 3 | Lead creation triggers |
+| FR-031 | Epic 3 | Lead stage lifecycle |
+| FR-032 | Epic 3 | Auto-assignment rules |
+| FR-033 | Epic 3 | Manual assignment override |
+| FR-034 | Epic 3 | Lead temperature rules engine |
+| FR-040 | Epic 4 | Booking types |
+| FR-041 | Epic 4 | Booking status lifecycle |
+| FR-042 | Epic 4 | AI + human booking creation |
+| FR-043 | Epic 4 | Show-up rate computation |
+| FR-050 | Epic 5 | Won/lost manual confirmation |
+| FR-051 | Epic 5 | Deal value entry |
+| FR-052 | Epic 5 | ROI reporting |
+| FR-060 | Epic 5 | Automation rate calculation |
+| FR-061 | Epic 5 | Sentiment analysis + trend |
+| FR-062 | Epic 5 | Drop-off reason classification |
+| FR-063 | Epic 5 | Lead temperature distribution chart |
+| FR-070 | Epic 3 | Internal notes |
+| FR-071 | Epic 3 | @mentions in-app |
+| FR-080 | Epic 6 | Integration event persistence |
+| FR-081 | Epic 6 | Health view |
+| FR-082 | Epic 6 | Retry + dead-letter handling |
+| FR-100–FR-104 | Epic 7 | Admin auth |
+| FR-110–FR-115 | Epic 7 | Tenant onboarding wizard |
+| FR-120–FR-124 | Epic 7 | Cross-tenant analytics |
+| FR-130–FR-135 | Epic 7 | Tenant management |
+| FR-140–FR-143 | Epic 7 | System health monitoring |
+| FR-150–FR-152 | Epic 7 | Cost tracking |
+| FR-160–FR-162 | Epic 7 | Support & debugging |
 
 ---
-
-## Epic List
-
-{{epics_list}}
-
-<!-- Epic and story content will be appended in Step 2 -->

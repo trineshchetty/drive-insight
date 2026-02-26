@@ -1,0 +1,106 @@
+# Sprint Status Tracking File
+# Generated: 2026-02-20
+# Project: trinstel-auto-ai
+# Tracking System: file-system
+# Story Location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#   - deferred: Story postponed to a later phase/sprint
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-02-20
+project: trinstel-auto-ai
+project_key: trinstel-auto-ai
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  # Epic 0: Project Foundation & Infrastructure
+  epic-0: in-progress
+  0-1-turborepo-monorepo-initialisation: done
+  0-2-local-development-environment-docker-compose: done
+  0-3-ci-cd-pipeline-github-actions: deferred
+  0-4-monitoring-observability-setup: in-progress
+  epic-0-retrospective: optional
+
+  # Epic 1: Tenant Authentication & Multi-Tenancy Foundation
+  epic-1: in-progress
+  1-1-tenant-database-schema-rls-policies: in-progress
+  1-2-tenant-user-authentication-login-session: backlog
+  1-3-role-based-access-control-owner-manager-agent: backlog
+  1-4-user-invitation-profile-management: backlog
+  epic-1-retrospective: optional
+
+  # Epic 2: Multi-Channel Lead Ingestion & Conversation Capture
+  epic-2: backlog
+  2-1-core-data-schema-contacts-conversations-messages: backlog
+  2-2-manychat-webhook-ingestion-whatsapp-messenger: backlog
+  2-3-meta-lead-ads-ingestion: backlog
+  2-4-sms-ingestion-twilio: backlog
+  2-5-conversation-view-with-full-transcript: backlog
+  epic-2-retrospective: optional
+
+  # Epic 3: Lead Pipeline & Triage Dashboard
+  epic-3: backlog
+  3-1-lead-creation-temperature-scoring: backlog
+  3-2-overview-dashboard-morning-briefing-three-queue-triage: backlog
+  3-3-lead-detail-panel-manychat-deep-link: backlog
+  3-4-lead-assignment-manual-auto: backlog
+  3-5-lead-stage-management-notes: backlog
+  epic-3-retrospective: optional
+
+  # Epic 4: Bookings Management
+  epic-4: backlog
+  4-1-bookings-data-schema-availability-engine: backlog
+  4-2-booking-creation-ai-triggered-manual: backlog
+  4-3-booking-lifecycle-management-show-up-tracking: backlog
+  epic-4-retrospective: optional
+
+  # Epic 5: Deals, ROI & Analytics
+  epic-5: backlog
+  5-1-ai-metrics-schema-automation-rate-calculation: backlog
+  5-2-won-lost-deal-capture-roi-reporting: backlog
+  5-3-sentiment-analysis-drop-off-classification: backlog
+  5-4-overview-analytics-dashboard-sla-metrics: backlog
+  epic-5-retrospective: optional
+
+  # Epic 6: System Health & Integration Reliability
+  epic-6: backlog
+  6-1-integration-event-persistence-retry-engine: backlog
+  6-2-system-health-dashboard-tenant-view: backlog
+  epic-6-retrospective: optional
+
+  # Epic 7: Admin Application — Tenant Operations
+  epic-7: backlog
+  7-1-admin-authentication: backlog
+  7-2-tenant-onboarding-wizard: backlog
+  7-3-tenant-management-list-pause-suspend-reactivate: backlog
+  7-4-cross-tenant-analytics-tenant-impersonation: backlog
+  7-5-admin-system-health-cost-tracking: backlog
+  epic-7-retrospective: optional

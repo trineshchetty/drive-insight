@@ -1,0 +1,153 @@
+# Docker Compose for Local Development
+# Story 0.2: Local Development Environment
+# All services with hot-reload enabled
+
+services:
+  # Supabase PostgreSQL Database
+  # Using Supabase CLI to manage the stack is recommended
+  # This service placeholder documents the expected ports
+  # Run `npx supabase start` separately to launch Supabase stack
+  # Ports: 54321 (API), 54322 (PostgreSQL), 54323 (Studio), 54324 (Mailpit)
+
+  # NestJS API Service
+  api:
+    build:
+      context: .
+      dockerfile: ./apps/api/Dockerfile
+      target: development
+    container_name: trinstel-auto-ai-api
+    ports:
+      - "3005:3000"  # External:Internal
+    volumes:
+      # Mount source code for hot-reload
+      - ./apps/api:/app/apps/api
+      - ./packages:/app/packages
+      # Exclude node_modules from bind mount (but NOT dist - NestJS needs to write to it)
+      - /app/node_modules
+      - /app/apps/api/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      # Database connection (points to host's Supabase local)
+      - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:54322/postgres
+      - SUPABASE_URL=http://host.docker.internal:54321
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      # Logging & Monitoring
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOKI_HOST=${LOKI_HOST}
+      - LOKI_USERNAME=${LOKI_USERNAME}
+      - LOKI_PASSWORD=${LOKI_PASSWORD}
+      - PROMETHEUS_PUSH_GATEWAY=${PROMETHEUS_PUSH_GATEWAY}
+      - PROMETHEUS_USERNAME=${PROMETHEUS_USERNAME}
+      - PROMETHEUS_PASSWORD=${PROMETHEUS_PASSWORD}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  # Next.js Web App (Tenant Dashboard)
+  web:
+    build:
+      context: .
+      dockerfile: ./apps/web/Dockerfile
+      target: development
+    container_name: trinstel-auto-ai-web
+    ports:
+      - "3003:3000"  # Port 3000 in use, using 3003 externally
+    volumes:
+      # Mount source code for HMR
+      - ./apps/web:/app/apps/web
+      - ./packages:/app/packages
+      # Exclude node_modules and .next from bind mount
+      - /app/node_modules
+      - /app/apps/web/node_modules
+      - /app/apps/web/.next
+      # Exclude Turbo cache
+      - /app/.turbo
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      # API URL for proxy configuration
+      - API_URL=http://api:3005
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  # Next.js Admin App (Admin Dashboard)
+  admin:
+    build:
+      context: .
+      dockerfile: ./apps/admin/Dockerfile
+      target: development
+    container_name: trinstel-auto-ai-admin
+    ports:
+      - "3002:3002"  # External:Internal (admin package.json runs on port 3002)
+    volumes:
+      # Mount source code for HMR
+      - ./apps/admin:/app/apps/admin
+      - ./packages:/app/packages
+      # Exclude node_modules and .next from bind mount
+      - /app/node_modules
+      - /app/apps/admin/node_modules
+      - /app/apps/admin/.next
+      # Exclude Turbo cache
+      - /app/.turbo
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
+      - NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3002', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  # n8n Workflow Automation
+  # n8n:
+  #   image: n8nio/n8n:latest
+  #   container_name: trinstel-auto-ai-n8n
+  #   ports:
+  #     - "5678:5678"
+  #   volumes:
+  #     - n8n_data:/home/node/.n8n
+  #   environment:
+  #     - N8N_BASIC_AUTH_ACTIVE=true
+  #     - N8N_BASIC_AUTH_USER=admin
+  #     - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
+  #     - WEBHOOK_URL=http://localhost:5678
+  #     # Allow n8n to call local API
+  #     - N8N_ALLOW_ARBITRARY_HEADERS=true
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:5678/healthz || exit 1"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 3
+  #     start_period: 30s
+
+# Named volumes for persistent data
+volumes:
+  n8n_data:
+    driver: local
+
+# Network configuration (default bridge network is sufficient)
+# Services can reference each other by service name (api, web, admin, n8n)
