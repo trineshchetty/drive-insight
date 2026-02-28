@@ -20,11 +20,9 @@ export class AgentProfile {
   id: string;
 
   @Column({ type: 'uuid' })
-  @Index()
   tenant_id: string;
 
   @Column({ type: 'uuid' })
-  @Index()
   user_id: string;
 
   @Column({ type: 'jsonb', default: {} })

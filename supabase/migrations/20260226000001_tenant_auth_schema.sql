@@ -48,6 +48,7 @@ CREATE INDEX IF NOT EXISTS idx_users_role ON users(tenant_id, role);
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: Tenant isolation using session variable
+-- Note: Role-based access policy will be added in Story 1.2 when role management is implemented
 CREATE POLICY users_tenant_isolation ON users
   USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
 
@@ -79,6 +80,7 @@ CREATE INDEX IF NOT EXISTS idx_agent_profiles_availability ON agent_profiles(ten
 ALTER TABLE agent_profiles ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: Tenant isolation using session variable
+-- Note: Role-based access policy will be added in Story 1.2 when role management is implemented
 CREATE POLICY agent_profiles_tenant_isolation ON agent_profiles
   USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
 
@@ -112,6 +114,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_actor ON audit_log(actor_user_id, creat
 ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: Tenant isolation using session variable
+-- Note: Role-based access policy will be added in Story 1.2 when role management is implemented
 CREATE POLICY audit_log_tenant_isolation ON audit_log
   USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
 

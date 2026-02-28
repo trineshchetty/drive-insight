@@ -8,6 +8,7 @@ import {
   OneToMany,
   JoinColumn,
   Index,
+  Unique,
 } from 'typeorm';
 import { Tenant } from './tenant.entity';
 import { AgentProfile } from './agent-profile.entity';
@@ -16,12 +17,12 @@ import { AgentProfile } from './agent-profile.entity';
 @Index(['tenant_id'])
 @Index(['email'])
 @Index(['tenant_id', 'role'])
+@Unique(['tenant_id', 'email'])
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({ type: 'uuid' })
-  @Index()
   tenant_id: string;
 
   @Column({ type: 'varchar', length: 255 })

@@ -131,40 +131,58 @@ describe('Story 1.1: Tenant Database Schema & RLS Policies', () => {
     });
 
     it('should only return tenant A data when app.current_tenant_id is set to tenant A', async () => {
-      // Set session variable for tenant A
-      await pool.query(`SELECT set_config('app.current_tenant_id', $1, true)`, [tenantA]);
+      // Use a single client connection to maintain session variables
+      const client = await pool.connect();
+      try {
+        // Set session variable for tenant A
+        await client.query(`SELECT set_config('app.current_tenant_id', $1, false)`, [tenantA]);
 
-      const result = await pool.query('SELECT * FROM users');
+        const result = await client.query('SELECT * FROM users');
 
-      expect(result.rows.length).toBe(1);
-      expect(result.rows[0].tenant_id).toBe(tenantA);
-      expect(result.rows[0].email).toBe('user-a@tenant-a.com');
+        expect(result.rows.length).toBe(1);
+        expect(result.rows[0].tenant_id).toBe(tenantA);
+        expect(result.rows[0].email).toBe('user-a@tenant-a.com');
+      } finally {
+        client.release();
+      }
     });
 
     it('should return zero rows when querying tenant B data with tenant A session', async () => {
-      // Set session variable for tenant A
-      await pool.query(`SELECT set_config('app.current_tenant_id', $1, true)`, [tenantA]);
+      // Use a single client connection to maintain session variables
+      const client = await pool.connect();
+      try {
+        // Set session variable for tenant A
+        await client.query(`SELECT set_config('app.current_tenant_id', $1, false)`, [tenantA]);
 
-      // Try to query tenant B data explicitly
-      const result = await pool.query('SELECT * FROM users WHERE tenant_id = $1', [tenantB]);
+        // Try to query tenant B data explicitly
+        const result = await client.query('SELECT * FROM users WHERE tenant_id = $1', [tenantB]);
 
-      expect(result.rows.length).toBe(0);
+        expect(result.rows.length).toBe(0);
+      } finally {
+        client.release();
+      }
     });
 
     it('should prevent UPDATE on tenant B data when session is tenant A', async () => {
-      await pool.query(`SELECT set_config('app.current_tenant_id', $1, true)`, [tenantA]);
+      // Use a single client connection to maintain session variables
+      const client = await pool.connect();
+      try {
+        await client.query(`SELECT set_config('app.current_tenant_id', $1, false)`, [tenantA]);
 
-      // Try to update tenant B user
-      const result = await pool.query(`
-        UPDATE users SET name = 'Hacked' WHERE tenant_id = $1 RETURNING *
-      `, [tenantB]);
+        // Try to update tenant B user
+        const result = await client.query(`
+          UPDATE users SET name = 'Hacked' WHERE tenant_id = $1 RETURNING *
+        `, [tenantB]);
 
-      expect(result.rows.length).toBe(0);
+        expect(result.rows.length).toBe(0);
 
-      // Verify tenant B data unchanged
-      await pool.query(`SELECT set_config('app.current_tenant_id', $1, true)`, [tenantB]);
-      const check = await pool.query('SELECT name FROM users WHERE tenant_id = $1', [tenantB]);
-      expect(check.rows[0].name).toBe('User B');
+        // Reset session and verify tenant B data unchanged
+        await client.query(`SELECT set_config('app.current_tenant_id', $1, false)`, [tenantB]);
+        const check = await client.query('SELECT name FROM users WHERE tenant_id = $1', [tenantB]);
+        expect(check.rows[0].name).toBe('User B');
+      } finally {
+        client.release();
+      }
     });
   });
 

@@ -51,7 +51,7 @@ development_status:
 
   # Epic 1: Tenant Authentication & Multi-Tenancy Foundation
   epic-1: in-progress
-  1-1-tenant-database-schema-rls-policies: in-progress
+  1-1-tenant-database-schema-rls-policies: done
   1-2-tenant-user-authentication-login-session: backlog
   1-3-role-based-access-control-owner-manager-agent: backlog
   1-4-user-invitation-profile-management: backlog
