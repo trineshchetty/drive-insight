@@ -553,7 +553,7 @@ throw new UnauthorizedException('Invalid token');
 A JWT has three parts separated by dots (`.`):
 
 ```
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVKJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
 ```
 
 ### Part 1: Header (Algorithm & Type)
@@ -565,7 +565,7 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4
 }
 ```
 
-**Encoded:** `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9`
+**Encoded:** `eyJhbGciOiJIUzI1NiINInR5cCI6IkpXVCJ9`
 
 **Says:** "I'm a JWT, signed with HMAC SHA256"
 
@@ -579,7 +579,7 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4
 }
 ```
 
-**Encoded:** `eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ`
+**Encoded:** `eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZOI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ`
 
 **Says:** "This is who I am and what I can do"
 
