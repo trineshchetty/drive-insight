@@ -1,5 +1,6 @@
 import { DataSource } from 'typeorm';
 import * as entities from './entities';
+import * as subscribers from './subscribers';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -9,6 +10,7 @@ export const AppDataSource = new DataSource({
   password: process.env.DB_PASSWORD || 'postgres',
   database: process.env.DB_NAME || 'postgres',
   entities: Object.values(entities),
+  subscribers: Object.values(subscribers), // TypeORM global query filters (currently disabled - see subscriber files)
   synchronize: false, // NEVER true in production - use migrations
   logging: process.env.NODE_ENV === 'development',
   extra: {
