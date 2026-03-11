@@ -28,14 +28,22 @@ RUN pnpm install --frozen-lockfile
 COPY apps/api ./apps/api
 COPY packages ./packages
 
+# Build the database package first (needed for initial build)
+WORKDIR /app/packages/database
+RUN pnpm build
+
 # Set working directory to API app
 WORKDIR /app/apps/api
+
+# Copy and set permissions for entrypoint script
+COPY apps/api/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Expose NestJS port (internal container port is 3000)
 EXPOSE 3000
 
-# Start NestJS development server with watch mode
-CMD ["pnpm", "run", "start:dev"]
+# Use entrypoint script to build and start server
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 # Production dependencies stage
 FROM base AS prod-deps

@@ -27,6 +27,53 @@ So that all channel ingestion stories have a ready data foundation to write into
 
 ---
 
+## Story 2.6: LangGraph Service Foundation & AI Agent Node Metadata
+
+As a platform engineer,
+I want the LangGraph service initialized with a basic conversation processing graph,
+So that webhook ingestion can extract AI agent node metadata for message storage and future AI-driven workflows can build on this foundation.
+
+**Acceptance Criteria:**
+
+**Given** the NestJS API is running
+**When** I inspect the module structure
+**Then** `apps/api/src/modules/langraph/` exists with files: `langraph.module.ts`, `langraph.service.ts`, `langraph.types.ts`
+**And** the `LangGraphModule` is imported into the main `AppModule`
+
+**Given** the LangGraph service is initialized
+**When** the application bootstraps
+**Then** a `StateGraph` is compiled with three nodes: `classifier`, `qualifier`, `booking_agent`
+**And** the graph entry point is set to `classifier`
+**And** state channels are defined: `messages`, `intent`, `temperature`, `agent_node`
+
+**Given** LangChain dependencies are needed
+**When** I inspect `apps/api/package.json`
+**Then** dependencies include: `@langchain/langgraph@^latest`, `@langchain/openai@^latest`, `@langchain/core@^latest`
+**And** `pnpm install` completes without errors
+
+**Given** environment variables are configured
+**When** I inspect `.env.local` and Docker Compose
+**Then** `OPENAI_API_KEY` is present and valid
+**And** `LANGCHAIN_TRACING_V2` (optional) is configurable for debugging
+
+**Given** a conversation event needs AI processing
+**When** `LangGraphService.extractAgentNode(messagePayload)` is called
+**Then** it returns a string identifying which AI agent node handled the message (e.g., `"classifier"`, `"Car Fit"`, `"Master"`)
+**And** if the message is from a human or customer, it returns `null`
+
+**Given** the service processes a test message
+**When** `LangGraphService.processConversation({ messages: [...] })` is called (integration test)
+**Then** the graph invokes successfully without errors
+**And** the response includes `{ agent_node: string, intent?: string }`
+**And** no actual LLM calls are made (mocked OpenAI client in tests)
+
+**Given** the API is running in local development
+**When** I trigger a test webhook event via `POST /api/webhooks/test`
+**Then** the LangGraph service logs: `"LangGraph graph compiled successfully"` on startup
+**And** Winston logs include `langraph` as a context label
+
+---
+
 ## Story 2.2: ManyChat Webhook Ingestion (WhatsApp / Messenger)
 
 As a dealership manager,
@@ -103,6 +150,126 @@ So that SMS leads are handled in the same triage workflow as WhatsApp leads.
 **Given** Twilio webhook signature verification fails
 **When** the request is processed
 **Then** HTTP 403 is returned and the message is not stored
+
+---
+
+## Story 2.7: LangGraph Cost Tracking & Prometheus Metrics
+
+As a platform engineer,
+I want LLM token usage and costs tracked per conversation and tenant,
+So that we can monitor AI spending, prevent cost overruns, and meet NFR-010 and NFR-011 requirements.
+
+**Acceptance Criteria:**
+
+**Given** migrations are applied
+**When** I inspect the database schema
+**Then** the `cost_tracking` table exists with columns: `id`, `tenant_id`, `conversation_id`, `service` (VARCHAR), `operation` (VARCHAR), `model` (VARCHAR), `tokens_used` (INT), `cost_usd` (DECIMAL), `created_at`
+**And** index `idx_cost_tracking_tenant_service` exists on `(tenant_id, service, created_at DESC)`
+
+**Given** the LangGraph service makes an OpenAI API call
+**When** `processConversation()` completes
+**Then** a record is inserted into `cost_tracking` with:
+- `service: 'openai'`
+- `operation: 'chat_completion'`
+- `model: 'gpt-4o-mini'` (or configured model)
+- `tokens_used`: Total tokens from response
+- `cost_usd`: Calculated based on model pricing
+**And** the `conversation_id` is linked
+
+**Given** cost tracking is enabled
+**When** a conversation processes 3 messages through LangGraph
+**Then** 3 separate `cost_tracking` records exist (one per LLM call)
+**And** each record has a unique `id` and timestamp
+
+**Given** Prometheus metrics are configured (from Epic 0 Story 0-4)
+**When** the LangGraph service tracks a cost
+**Then** the `llmCostTotal` counter is incremented with labels: `{ tenant_id, model, operation }`
+**And** Grafana Cloud receives the metric on the next 15-second push
+
+**Given** the analytics API is called
+**When** `GET /api/analytics/costs?tenantId=<uuid>&period=7d` is requested
+**Then** it returns aggregated cost data:
+```json
+{
+  "total_cost_usd": 2.45,
+  "total_tokens": 125000,
+  "breakdown_by_model": [
+    { "model": "gpt-4o-mini", "cost_usd": 2.45, "tokens": 125000 }
+  ],
+  "period": "7d"
+}
+```
+
+**Given** a tenant exceeds 50% of their monthly token budget
+**When** the cost tracking service computes the threshold
+**Then** an alert event is emitted (logged to Winston with `level: 'warn'`)
+**And** the alert includes: `{ tenant_id, usage_percent: 52, threshold: 50, budget_remaining_usd: 24.50 }`
+*Note: Alert delivery (email/Slack) is deferred to Epic 6*
+
+**Given** LLM calls are mocked in tests
+**When** integration tests run
+**Then** cost tracking records are created with mock token counts
+**And** tests validate the `cost_usd` calculation formula matches OpenAI pricing
+
+---
+
+## Story 2.8: LangGraph Structured Output Schema for Webhook Integration
+
+As a webhook integration developer,
+I want the LangGraph service to return structured metadata when processing ManyChat messages,
+So that Story 2.2 can store `ai_agent_node` data and future stories can consume qualification signals.
+
+**Acceptance Criteria:**
+
+**Given** the LangGraph service is configured
+**When** I inspect `apps/api/src/modules/langraph/langraph.types.ts`
+**Then** a `ConversationOutput` interface exists:
+```typescript
+export interface ConversationOutput {
+  agent_node: string | null;        // "classifier", "qualifier", "booking_agent", null
+  intent?: 'inquiry' | 'objection' | 'booking_request' | 'qualification';
+  qualified?: boolean;               // true if qualification threshold met
+  temperature?: 'HOT' | 'WARM' | 'COOL' | 'COLD';
+  sentiment?: 'positive' | 'neutral' | 'negative';
+  dropoff_reason?: string;           // populated if conversation ends
+  tokens_used: number;
+  cost_usd: number;
+}
+```
+
+**Given** a ManyChat webhook event is processed (Story 2.2)
+**When** the event processor calls `LangGraphService.analyzeMessage(message, conversationContext)`
+**Then** it returns a `ConversationOutput` object
+**And** `agent_node` is extracted from the LangGraph state
+**And** if the message is customer-sent, `agent_node` is `null`
+**And** if the message is AI-generated, `agent_node` matches the node that produced it
+
+**Given** the webhook processor receives an AI message from ManyChat
+**When** the message payload contains: `{ sender_type: 'ai', node_name: 'Car Fit' }`
+**Then** `LangGraphService.extractAgentNode()` returns `"Car Fit"`
+**And** this value is stored in `messages.ai_agent_node`
+
+**Given** the LangGraph `classifier` node runs (basic implementation)
+**When** a customer message contains "book a test drive"
+**Then** the structured output includes: `{ intent: 'booking_request', agent_node: 'classifier' }`
+**And** the graph routes to the `booking_agent` node on the next invocation
+
+**Given** the LangGraph `qualifier` node runs (basic implementation)
+**When** a customer provides: name, phone, vehicle interest
+**Then** the structured output includes: `{ qualified: true, temperature: 'HOT', agent_node: 'qualifier' }`
+**And** this data is available for Epic 3 Story 3.1 (Lead Creation)
+
+**Given** a conversation processes through the graph
+**When** multiple messages are analyzed sequentially
+**Then** the graph maintains state between invocations
+**And** previous `intent` and `temperature` values are accessible in state channels
+**And** the final output reflects cumulative analysis
+
+**Given** the LangGraph service is tested
+**When** unit tests run for `analyzeMessage()`
+**Then** mock LLM responses return deterministic structured outputs
+**And** tests validate all fields in `ConversationOutput` are correctly populated
+**And** tests cover edge cases: empty messages, malformed payloads, missing context
 
 ---
 

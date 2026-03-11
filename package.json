@@ -7,7 +7,9 @@
     "dev": "turbo dev",
     "lint": "turbo lint",
     "clean": "turbo clean",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "test:api:integration:auth": "dotenv -e .env -- jest --config apps/api/test/jest-integration-auth.json",
+    "db:reset": "npx supabase db reset"
   },
   "devDependencies": {
     "prettier": "^3.2.5",

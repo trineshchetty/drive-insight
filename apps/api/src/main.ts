@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { LoggerService } from './modules/logger';
@@ -12,6 +13,15 @@ async function bootstrap() {
     bufferLogs: true,
     logger: logger,
   });
+
+  // Global validation pipe for DTOs
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true, // Strip non-whitelisted properties
+      forbidNonWhitelisted: true, // Throw error if non-whitelisted properties
+      transform: true, // Auto-transform payloads to DTO types
+    }),
+  );
 
   // Global prefix for all routes
   app.setGlobalPrefix('api');
@@ -28,6 +38,7 @@ async function bootstrap() {
       .addBearerAuth()
       .addTag('health', 'Health check endpoints')
       .addTag('metrics', 'Prometheus metrics')
+      .addTag('auth', 'Authentication endpoints')
       .build();
 
     const document = SwaggerModule.createDocument(app, config);
