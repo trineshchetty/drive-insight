@@ -1,106 +1,129 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
-import { UsersController } from '../../modules/users/users.controller';
-import { UsersService } from '../../modules/users/users.service';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { SupabaseAuthGuard } from '../../common/guards/supabase-auth.guard';
-import { Reflector } from '@nestjs/core';
+import * as request from 'supertest';
+import { RbacTestContext, createAuthenticatedUser, createRbacTestContext, deleteSupabaseUsers } from './rbac-test.utils';
 
 /**
  * Agent Role Access Control Tests
  *
- * Tests that agents cannot access owner/manager-only endpoints
- * AC: Agent cannot POST /api/users (403 Forbidden)
+ * Verifies real HTTP access control for agent users.
  */
 describe('Agent Access Control', () => {
-  let app: INestApplication;
-  let usersController: UsersController;
+  let ctx: RbacTestContext;
+  const createdUsers: Array<{ id: string }> = [];
 
-  const mockUsersService = {
-    findAllForTenant: jest.fn(),
-    createUser: jest.fn(),
-    updateUser: jest.fn(),
-    deleteUser: jest.fn(),
-  };
-
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [UsersController],
-      providers: [
-        {
-          provide: UsersService,
-          useValue: mockUsersService,
-        },
-        RolesGuard,
-        Reflector,
-      ],
-    })
-      .overrideGuard(SupabaseAuthGuard)
-      .useValue({ canActivate: () => true }) // Mock auth guard
-      .compile();
-
-    app = module.createNestApplication();
-    usersController = module.get<UsersController>(UsersController);
-
-    // Apply global guards
-    const reflector = module.get<Reflector>(Reflector);
-    app.useGlobalGuards(new RolesGuard(reflector));
-
-    await app.init();
+  beforeAll(async () => {
+    ctx = await createRbacTestContext();
   });
 
-  afterEach(async () => {
-    await app.close();
+  afterAll(async () => {
+    await deleteSupabaseUsers(ctx, createdUsers);
+    await ctx.cleanup();
   });
 
-  describe('POST /users - Create User', () => {
-    it('should block agent from creating user (tested by RolesGuard unit tests)', () => {
-      // NOTE: Guard blocking is tested in roles-guard.spec.ts
-      // RolesGuard unit test verifies that @Roles('owner', 'manager') blocks 'agent' role
-      // Controller tests cannot fully simulate guard execution due to NestJS testing limitations
-      expect(true).toBe(true);
+  it('returns 403 when an agent attempts to create a user and the handler does not persist anything', async () => {
+    const agent = await createAuthenticatedUser(ctx, {
+      tenantId: ctx.tenantAId,
+      role: 'agent',
+      name: 'Agent A',
+      emailPrefix: 'rbac-agent-create',
     });
+    createdUsers.push(agent);
 
-    it('should allow agent to GET /users (no role restriction)', async () => {
-      const mockRequest = {
-        user: {
-          id: 'agent-1-id',
-          tenant_id: 'tenant-123',
-          role: 'agent',
-          email: 'agent@example.com',
-        },
-        queryRunner: {},
-      };
+    const forbiddenEmail = `blocked-${Date.now()}@example.com`;
 
-      mockUsersService.findAllForTenant.mockResolvedValue([
-        {
-          id: 'agent-1-id',
-          email: 'agent@example.com',
-          name: 'Agent 1',
-          role: 'agent',
-        },
-      ]);
+    await request(ctx.app.getHttpServer())
+      .post('/api/users')
+      .set('Authorization', `Bearer ${agent.token}`)
+      .send({
+        email: forbiddenEmail,
+        name: 'Should Not Exist',
+        role: 'agent',
+      })
+      .expect(403);
 
-      const result = await usersController.findAll(mockRequest);
+    const result = await ctx.adminDataSource.query(
+      'SELECT id FROM users WHERE email = $1',
+      [forbiddenEmail],
+    );
 
-      expect(result).toBeDefined();
-      expect(mockUsersService.findAllForTenant).toHaveBeenCalledWith({});
-    });
+    expect(result).toHaveLength(0);
   });
 
-  describe('DELETE /users/:id - Delete User', () => {
-    it('should block agent from deleting user (tested by RolesGuard unit tests)', () => {
-      // NOTE: Guard blocking is tested in roles-guard.spec.ts
-      // RolesGuard unit test verifies that @Roles('owner') blocks 'agent' role
-      expect(true).toBe(true);
+  it('returns 403 when an agent attempts to update another user', async () => {
+    const agent = await createAuthenticatedUser(ctx, {
+      tenantId: ctx.tenantAId,
+      role: 'agent',
+      name: 'Agent B',
+      emailPrefix: 'rbac-agent-update-actor',
     });
+    createdUsers.push(agent);
+
+    const victim = await createAuthenticatedUser(ctx, {
+      tenantId: ctx.tenantAId,
+      role: 'manager',
+      name: 'Manager Victim',
+      emailPrefix: 'rbac-agent-update-victim',
+    });
+    createdUsers.push(victim);
+
+    await request(ctx.app.getHttpServer())
+      .patch(`/api/users/${victim.id}`)
+      .set('Authorization', `Bearer ${agent.token}`)
+      .send({ name: 'Tampered Name' })
+      .expect(403);
   });
 
-  describe('PATCH /users/:id - Update User', () => {
-    it('should block agent from updating user (tested by RolesGuard unit tests)', () => {
-      // NOTE: Guard blocking is tested in roles-guard.spec.ts
-      // RolesGuard unit test verifies that @Roles('owner', 'manager') blocks 'agent' role
-      expect(true).toBe(true);
+  it('returns 403 when an agent attempts to delete another user', async () => {
+    const agent = await createAuthenticatedUser(ctx, {
+      tenantId: ctx.tenantAId,
+      role: 'agent',
+      name: 'Agent C',
+      emailPrefix: 'rbac-agent-delete-actor',
+    });
+    createdUsers.push(agent);
+
+    const victim = await createAuthenticatedUser(ctx, {
+      tenantId: ctx.tenantAId,
+      role: 'agent',
+      name: 'Agent Victim',
+      emailPrefix: 'rbac-agent-delete-victim',
+    });
+    createdUsers.push(victim);
+
+    await request(ctx.app.getHttpServer())
+      .delete(`/api/users/${victim.id}`)
+      .set('Authorization', `Bearer ${agent.token}`)
+      .expect(403);
+  });
+
+  it('returns only the authenticated agent when an agent lists users', async () => {
+    const agent = await createAuthenticatedUser(ctx, {
+      tenantId: ctx.tenantAId,
+      role: 'agent',
+      name: 'Agent Visible',
+      emailPrefix: 'rbac-agent-list-self',
+    });
+    createdUsers.push(agent);
+
+    const sameTenantManager = await createAuthenticatedUser(ctx, {
+      tenantId: ctx.tenantAId,
+      role: 'manager',
+      name: 'Manager Hidden',
+      emailPrefix: 'rbac-agent-list-manager',
+    });
+    createdUsers.push(sameTenantManager);
+
+    const response = await request(ctx.app.getHttpServer())
+      .get('/api/users')
+      .set('Authorization', `Bearer ${agent.token}`)
+      .expect(200);
+
+    expect(Array.isArray(response.body)).toBe(true);
+    expect(response.body).toHaveLength(1);
+    expect(response.body[0]).toMatchObject({
+      id: agent.id,
+      email: agent.email,
+      tenant_id: ctx.tenantAId,
+      role: 'agent',
     });
   });
 });

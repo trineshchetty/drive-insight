@@ -16,6 +16,8 @@ import {
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -52,8 +54,12 @@ export class UsersController {
     status: 403,
     description: 'Forbidden - requires owner or manager role',
   })
-  async createUser(@Body() createUserDto: any, @Request() req: any) {
-    return this.usersService.createUser(createUserDto, req.queryRunner);
+  async createUser(@Body() createUserDto: CreateUserDto, @Request() req: any) {
+    return this.usersService.createUser(
+      createUserDto,
+      req.user.tenant_id,
+      req.queryRunner,
+    );
   }
 
   @Patch(':id')
@@ -68,7 +74,7 @@ export class UsersController {
   @ApiResponse({ status: 404, description: 'User not found' })
   async updateUser(
     @Param('id') id: string,
-    @Body() updateUserDto: any,
+    @Body() updateUserDto: UpdateUserDto,
     @Request() req: any,
   ) {
     return this.usersService.updateUser(id, updateUserDto, req.queryRunner);

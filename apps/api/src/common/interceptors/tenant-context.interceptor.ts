@@ -3,6 +3,7 @@ import {
   NestInterceptor,
   ExecutionContext,
   CallHandler,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Observable, from, lastValueFrom } from 'rxjs';
 import { DataSource } from 'typeorm';
@@ -13,7 +14,7 @@ import { RequestContext } from '../context/request-context';
  *
  * Responsibilities:
  * 1. Set PostgreSQL session variables for RLS (app.current_user_id, app.current_tenant_id, app.current_user_role)
- * 2. Set AsyncLocalStorage context for TypeORM subscribers (Story 1.3)
+ * 2. Set AsyncLocalStorage context for downstream data-access layers (Story 1.3)
  * 3. Manage transaction lifecycle (start, commit, rollback, release)
  *
  * Execution order:
@@ -26,10 +27,7 @@ import { RequestContext } from '../context/request-context';
 export class TenantContextInterceptor implements NestInterceptor {
   constructor(private dataSource: DataSource) {}
 
-  async intercept(
-    context: ExecutionContext,
-    next: CallHandler,
-  ): Promise<Observable<any>> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
     const user = request.user; // Populated by SupabaseAuthGuard
 
@@ -38,58 +36,89 @@ export class TenantContextInterceptor implements NestInterceptor {
       return next.handle();
     }
 
+    this.validateUserContext(user);
+
+    return from(this.runWithContext(request, user, next));
+  }
+
+  private async runWithContext(
+    request: any,
+    user: { id: string; tenant_id: string; role: string; email?: string },
+    next: CallHandler,
+  ): Promise<any> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
 
     try {
       await queryRunner.startTransaction();
 
-      // Set PostgreSQL session variables for RLS (Story 1.2)
-      // Note: SET LOCAL doesn't support parameterized queries, using format() for safety
       await queryRunner.query(
-        `SET LOCAL app.current_user_id = '${user.id.replace(/'/g, "''")}'`,
+        `SELECT set_config('app.current_user_id', $1, true)`,
+        [user.id],
       );
       await queryRunner.query(
-        `SET LOCAL app.current_tenant_id = '${user.tenant_id.replace(/'/g, "''")}'`,
+        `SELECT set_config('app.current_tenant_id', $1, true)`,
+        [user.tenant_id],
       );
       await queryRunner.query(
-        `SET LOCAL app.current_user_role = '${user.role.replace(/'/g, "''")}'`,
+        `SELECT set_config('app.current_user_role', $1, true)`,
+        [user.role],
       );
 
       // Attach queryRunner to request for repository use
       request.queryRunner = queryRunner;
 
-      // NEW in Story 1.3: Wrap request handler in AsyncLocalStorage context
-      // This makes user context available to TypeORM subscribers for role-based filtering
-      const result = await RequestContext.run(
+      return await RequestContext.run(
         {
           userId: user.id,
           tenantId: user.tenant_id,
           role: user.role,
-          email: user.email,
+          email: user.email ?? '',
         },
         async () => {
           try {
-            // Convert Observable to Promise
-            const observable = next.handle();
-            const response = await lastValueFrom(observable);
+            const response = await lastValueFrom(next.handle());
             await queryRunner.commitTransaction();
             return response;
           } catch (error) {
-            await queryRunner.rollbackTransaction();
+            if (queryRunner.isTransactionActive) {
+              await queryRunner.rollbackTransaction();
+            }
             throw error;
           } finally {
-            await queryRunner.release();
+            if (!queryRunner.isReleased) {
+              await queryRunner.release();
+            }
           }
         },
       );
-
-      // Return Observable from result
-      return from(Promise.resolve(result));
     } catch (error) {
-      await queryRunner.rollbackTransaction();
-      await queryRunner.release();
+      if (queryRunner.isTransactionActive) {
+        await queryRunner.rollbackTransaction();
+      }
+      if (!queryRunner.isReleased) {
+        await queryRunner.release();
+      }
       throw error;
     }
+  }
+
+  private validateUserContext(user: any): asserts user is {
+    id: string;
+    tenant_id: string;
+    role: string;
+    email?: string;
+  } {
+    if (
+      !this.isNonEmptyString(user?.id) ||
+      !this.isNonEmptyString(user?.tenant_id) ||
+      !this.isNonEmptyString(user?.role)
+    ) {
+      throw new UnauthorizedException('Invalid authenticated user context');
+    }
+  }
+
+  private isNonEmptyString(value: unknown): value is string {
+    return typeof value === 'string' && value.trim().length > 0;
   }
 }

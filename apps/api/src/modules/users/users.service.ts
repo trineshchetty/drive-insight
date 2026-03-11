@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { QueryRunner } from 'typeorm';
 import { User } from '@drive-insight/database';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -29,15 +31,22 @@ export class UsersService {
   /**
    * Create a new user (owner/manager only)
    * @param createUserDto - User data
+   * @param tenantId - Current tenant ID from authenticated user context
    * @param queryRunner - QueryRunner with tenant context
    */
-  async createUser(createUserDto: any, queryRunner: QueryRunner) {
+  async createUser(
+    createUserDto: CreateUserDto,
+    tenantId: string,
+    queryRunner: QueryRunner,
+  ) {
     if (!queryRunner) {
       throw new Error('QueryRunner not available');
     }
 
-    // Create user entity (tenant_id will be set from PostgreSQL RLS context)
-    const user = queryRunner.manager.create(User, createUserDto);
+    const user = queryRunner.manager.create(User, {
+      ...createUserDto,
+      tenant_id: tenantId,
+    });
     const savedUser = await queryRunner.manager.save(user);
 
     return savedUser;
@@ -51,7 +60,7 @@ export class UsersService {
    */
   async updateUser(
     id: string,
-    updateUserDto: any,
+    updateUserDto: UpdateUserDto,
     queryRunner: QueryRunner,
   ) {
     if (!queryRunner) {
