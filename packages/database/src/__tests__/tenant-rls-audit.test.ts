@@ -8,20 +8,30 @@
  * - AC4: TypeORM entities map correctly
  */
 
+import { randomUUID } from 'crypto';
 import { Pool } from 'pg';
 import { AppDataSource } from '../data-source';
 
 describe('Story 1.1: Tenant Database Schema & RLS Policies', () => {
-  let pool: Pool;
+  let adminPool: Pool;
+  let appPool: Pool;
 
   beforeAll(async () => {
     // Connect to Supabase local database
-    pool = new Pool({
+    adminPool = new Pool({
       host: 'localhost',
       port: 54322,
       user: 'postgres',
       password: 'postgres',
       database: 'postgres',
+    });
+
+    appPool = new Pool({
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '54322', 10),
+      user: 'app_user',
+      password: 'app_user_dev',
+      database: process.env.DB_NAME || 'postgres',
     });
 
     // Initialize TypeORM DataSource
@@ -31,7 +41,8 @@ describe('Story 1.1: Tenant Database Schema & RLS Policies', () => {
   });
 
   afterAll(async () => {
-    await pool.end();
+    await appPool.end();
+    await adminPool.end();
     if (AppDataSource.isInitialized) {
       await AppDataSource.destroy();
     }
@@ -39,7 +50,7 @@ describe('Story 1.1: Tenant Database Schema & RLS Policies', () => {
 
   describe('AC1: Schema Validation', () => {
     it('should have tenants table with correct columns', async () => {
-      const result = await pool.query(`
+      const result = await adminPool.query(`
         SELECT column_name, data_type, is_nullable
         FROM information_schema.columns
         WHERE table_name = 'tenants'
@@ -56,13 +67,13 @@ describe('Story 1.1: Tenant Database Schema & RLS Policies', () => {
     });
 
     it('should have users table with tenant_id and RLS enabled', async () => {
-      const result = await pool.query(`
+      const result = await adminPool.query(`
         SELECT column_name FROM information_schema.columns
         WHERE table_name = 'users' AND column_name = 'tenant_id'
       `);
       expect(result.rows.length).toBe(1);
 
-      const rlsResult = await pool.query(`
+      const rlsResult = await adminPool.query(`
         SELECT relrowsecurity FROM pg_class
         WHERE relname = 'users'
       `);
@@ -70,7 +81,7 @@ describe('Story 1.1: Tenant Database Schema & RLS Policies', () => {
     });
 
     it('should have agent_profiles table with tenant_id and user_id foreign keys', async () => {
-      const result = await pool.query(`
+      const result = await adminPool.query(`
         SELECT column_name FROM information_schema.columns
         WHERE table_name = 'agent_profiles' AND column_name IN ('tenant_id', 'user_id')
       `);
@@ -78,7 +89,7 @@ describe('Story 1.1: Tenant Database Schema & RLS Policies', () => {
     });
 
     it('should have audit_log table with required columns', async () => {
-      const result = await pool.query(`
+      const result = await adminPool.query(`
         SELECT column_name FROM information_schema.columns
         WHERE table_name = 'audit_log'
         AND column_name IN ('actor_user_id', 'action', 'entity_type', 'entity_id', 'before', 'after')
@@ -87,7 +98,7 @@ describe('Story 1.1: Tenant Database Schema & RLS Policies', () => {
     });
 
     it('should have all required indexes', async () => {
-      const result = await pool.query(`
+      const result = await adminPool.query(`
         SELECT indexname FROM pg_indexes
         WHERE tablename IN ('tenants', 'users', 'agent_profiles', 'audit_log')
       `);
@@ -102,40 +113,48 @@ describe('Story 1.1: Tenant Database Schema & RLS Policies', () => {
   describe('AC2: RLS Policy Tests', () => {
     let tenantA: string;
     let tenantB: string;
+    let ownerAId: string;
+    let ownerBId: string;
 
     beforeEach(async () => {
+      ownerAId = randomUUID();
+      ownerBId = randomUUID();
+
       // Create two test tenants
-      const tenantAResult = await pool.query(`
+      const tenantAResult = await adminPool.query(`
         INSERT INTO tenants (name, branch) VALUES ('Tenant A', 'Branch A') RETURNING id
       `);
       tenantA = tenantAResult.rows[0].id;
 
-      const tenantBResult = await pool.query(`
+      const tenantBResult = await adminPool.query(`
         INSERT INTO tenants (name, branch) VALUES ('Tenant B', 'Branch B') RETURNING id
       `);
       tenantB = tenantBResult.rows[0].id;
 
       // Insert users for both tenants
-      await pool.query(`
-        INSERT INTO users (tenant_id, email, role, name)
+      await adminPool.query(`
+        INSERT INTO users (id, tenant_id, email, role, name)
         VALUES
-          ($1, 'user-a@tenant-a.com', 'owner', 'User A'),
-          ($2, 'user-b@tenant-b.com', 'owner', 'User B')
-      `, [tenantA, tenantB]);
+          ($1, $2, 'user-a@tenant-a.com', 'owner', 'User A'),
+          ($3, $4, 'user-b@tenant-b.com', 'owner', 'User B')
+      `, [ownerAId, tenantA, ownerBId, tenantB]);
     });
 
     afterEach(async () => {
       // Clean up test data
-      await pool.query('DELETE FROM users WHERE tenant_id IN ($1, $2)', [tenantA, tenantB]);
-      await pool.query('DELETE FROM tenants WHERE id IN ($1, $2)', [tenantA, tenantB]);
+      await adminPool.query('DELETE FROM users WHERE tenant_id IN ($1, $2)', [tenantA, tenantB]);
+      await adminPool.query('DELETE FROM audit_log WHERE tenant_id IN ($1, $2)', [tenantA, tenantB]);
+      await adminPool.query('DELETE FROM tenants WHERE id IN ($1, $2)', [tenantA, tenantB]);
     });
 
     it('should only return tenant A data when app.current_tenant_id is set to tenant A', async () => {
       // Use a single client connection to maintain session variables
-      const client = await pool.connect();
+      const client = await appPool.connect();
       try {
         // Set session variable for tenant A
         await client.query(`SELECT set_config('app.current_tenant_id', $1, false)`, [tenantA]);
+        await client.query(`SELECT set_config('app.current_user_role', $1, false)`, ['owner']);
+        await client.query(`SELECT set_config('app.current_user_id', $1, false)`, [ownerAId]);
 
         const result = await client.query('SELECT * FROM users');
 
@@ -149,10 +168,12 @@ describe('Story 1.1: Tenant Database Schema & RLS Policies', () => {
 
     it('should return zero rows when querying tenant B data with tenant A session', async () => {
       // Use a single client connection to maintain session variables
-      const client = await pool.connect();
+      const client = await appPool.connect();
       try {
         // Set session variable for tenant A
         await client.query(`SELECT set_config('app.current_tenant_id', $1, false)`, [tenantA]);
+        await client.query(`SELECT set_config('app.current_user_role', $1, false)`, ['owner']);
+        await client.query(`SELECT set_config('app.current_user_id', $1, false)`, [ownerAId]);
 
         // Try to query tenant B data explicitly
         const result = await client.query('SELECT * FROM users WHERE tenant_id = $1', [tenantB]);
@@ -165,9 +186,11 @@ describe('Story 1.1: Tenant Database Schema & RLS Policies', () => {
 
     it('should prevent UPDATE on tenant B data when session is tenant A', async () => {
       // Use a single client connection to maintain session variables
-      const client = await pool.connect();
+      const client = await appPool.connect();
       try {
         await client.query(`SELECT set_config('app.current_tenant_id', $1, false)`, [tenantA]);
+        await client.query(`SELECT set_config('app.current_user_role', $1, false)`, ['owner']);
+        await client.query(`SELECT set_config('app.current_user_id', $1, false)`, [ownerAId]);
 
         // Try to update tenant B user
         const result = await client.query(`
@@ -191,27 +214,27 @@ describe('Story 1.1: Tenant Database Schema & RLS Policies', () => {
     let userId: string;
 
     beforeEach(async () => {
-      const tenantResult = await pool.query(`
+      const tenantResult = await adminPool.query(`
         INSERT INTO tenants (name) VALUES ('Audit Test Tenant') RETURNING id
       `);
       tenantId = tenantResult.rows[0].id;
     });
 
     afterEach(async () => {
-      await pool.query('DELETE FROM audit_log WHERE tenant_id = $1', [tenantId]);
-      await pool.query('DELETE FROM users WHERE tenant_id = $1', [tenantId]);
-      await pool.query('DELETE FROM tenants WHERE id = $1', [tenantId]);
+      await adminPool.query('DELETE FROM audit_log WHERE tenant_id = $1', [tenantId]);
+      await adminPool.query('DELETE FROM users WHERE tenant_id = $1', [tenantId]);
+      await adminPool.query('DELETE FROM tenants WHERE id = $1', [tenantId]);
     });
 
     it('should create audit_log entry on INSERT with action=INSERT and after state', async () => {
-      const userResult = await pool.query(`
+      const userResult = await adminPool.query(`
         INSERT INTO users (tenant_id, email, role, name)
         VALUES ($1, 'test@test.com', 'owner', 'Test User')
         RETURNING id
       `, [tenantId]);
       userId = userResult.rows[0].id;
 
-      const auditResult = await pool.query(`
+      const auditResult = await adminPool.query(`
         SELECT * FROM audit_log
         WHERE entity_type = 'users' AND entity_id = $1 AND action = 'INSERT'
       `, [userId]);
@@ -224,7 +247,7 @@ describe('Story 1.1: Tenant Database Schema & RLS Policies', () => {
     });
 
     it('should create audit_log entry on UPDATE with before and after state', async () => {
-      const userResult = await pool.query(`
+      const userResult = await adminPool.query(`
         INSERT INTO users (tenant_id, email, role, name)
         VALUES ($1, 'update-test@test.com', 'owner', 'Original Name')
         RETURNING id
@@ -232,11 +255,11 @@ describe('Story 1.1: Tenant Database Schema & RLS Policies', () => {
       userId = userResult.rows[0].id;
 
       // Update the user
-      await pool.query(`
+      await adminPool.query(`
         UPDATE users SET name = 'Updated Name' WHERE id = $1
       `, [userId]);
 
-      const auditResult = await pool.query(`
+      const auditResult = await adminPool.query(`
         SELECT * FROM audit_log
         WHERE entity_type = 'users' AND entity_id = $1 AND action = 'UPDATE'
         ORDER BY created_at DESC
@@ -250,7 +273,7 @@ describe('Story 1.1: Tenant Database Schema & RLS Policies', () => {
     });
 
     it('should create audit_log entry on DELETE with before state', async () => {
-      const userResult = await pool.query(`
+      const userResult = await adminPool.query(`
         INSERT INTO users (tenant_id, email, role, name)
         VALUES ($1, 'delete-test@test.com', 'owner', 'Delete Me')
         RETURNING id
@@ -258,9 +281,9 @@ describe('Story 1.1: Tenant Database Schema & RLS Policies', () => {
       userId = userResult.rows[0].id;
 
       // Delete the user
-      await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+      await adminPool.query('DELETE FROM users WHERE id = $1', [userId]);
 
-      const auditResult = await pool.query(`
+      const auditResult = await adminPool.query(`
         SELECT * FROM audit_log
         WHERE entity_type = 'users' AND entity_id = $1 AND action = 'DELETE'
       `, [userId]);

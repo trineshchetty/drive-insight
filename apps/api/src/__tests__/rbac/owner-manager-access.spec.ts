@@ -151,7 +151,7 @@ describe('Owner/Manager Access Control', () => {
 
     expect(ownerResponse.body).toMatchObject({
       invite_status: 'sent',
-      invite_email_status: 'sent',
+      invite_email_status: 'queued',
       user: {
         email: ownerInvitedEmail,
         tenant_id: ctx.tenantAId,

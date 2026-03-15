@@ -53,6 +53,21 @@ export class SupabaseAdminService {
     return data.user;
   }
 
+  async getUserById(userId: string): Promise<SupabaseAuthUser | null> {
+    const { data, error } = await this.supabaseAdmin.auth.admin.getUserById(
+      userId,
+    );
+
+    if (error) {
+      if (error.message?.includes('not found')) {
+        return null;
+      }
+      throw error;
+    }
+
+    return data.user ?? null;
+  }
+
   async findUserByEmail(email: string): Promise<SupabaseAuthUser | null> {
     let page = 1;
 

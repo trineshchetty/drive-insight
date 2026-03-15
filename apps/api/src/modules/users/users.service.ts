@@ -177,7 +177,7 @@ export class UsersService {
       return {
         message: `Invitation sent to ${email}`,
         invite_status: 'sent',
-        invite_email_status: 'sent',
+        invite_email_status: 'queued',
         user: this.toUserResponse(savedUser),
       };
     } catch (error) {
@@ -330,11 +330,11 @@ export class UsersService {
     queryRunner: QueryRunner,
     request: any,
   ) {
-    const authUser = await this.supabaseAdminService.findUserByEmail(
-      existingUser.email,
+    const authUser = await this.supabaseAdminService.getUserById(
+      existingUser.id,
     );
 
-    if (!authUser || authUser.id !== existingUser.id) {
+    if (!authUser) {
       throw new ConflictException(
         `Existing invite for ${existingUser.email} is out of sync with Supabase Auth`,
       );
@@ -356,7 +356,16 @@ export class UsersService {
     existingUser.activated_at = null;
     existingUser.disabled_at = null;
 
-    const savedUser = await queryRunner.manager.save(existingUser);
+    let savedUser: User;
+    try {
+      savedUser = await queryRunner.manager.save(existingUser);
+    } catch (error) {
+      // Compensate: re-disable the auth user since the DB update failed
+      await this.supabaseAdminService.disableUser(existingUser.id).catch(() => {
+        return undefined;
+      });
+      throw error;
+    }
 
     this.queueInvitationEmail(request, {
       email: savedUser.email,
@@ -369,7 +378,7 @@ export class UsersService {
     return {
       message: `Invitation re-sent to ${savedUser.email}`,
       invite_status: 'resent',
-      invite_email_status: 'sent',
+      invite_email_status: 'queued',
       user: this.toUserResponse(savedUser),
     };
   }

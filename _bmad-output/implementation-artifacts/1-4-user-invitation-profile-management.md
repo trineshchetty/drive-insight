@@ -1,6 +1,6 @@
 # Story 1.4: User Invitation & Profile Management
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -436,7 +436,31 @@ Codex (GPT-5)
 - `pnpm-lock.yaml` - refreshed the lockfile after workspace dependency changes
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` - moved Story 1.4 into review
 
+### Senior Developer Review (AI)
+
+**Reviewer:** Trinesh (via Claude Opus 4.6) on 2026-03-16
+
+**Issues Found:** 3 High, 5 Medium, 2 Low
+**Issues Fixed:** 3 High + 4 Medium = 7 fixed
+
+**HIGH (all fixed):**
+- H1: Post-commit email failure crashed client response despite committed transaction → wrapped postCommitActions in try/catch
+- H2: `invite_email_status: 'sent'` was premature (email not yet sent) → changed to `'queued'`
+- H3: `findUserByEmail` O(n) paginated full scan in reinvite → added `getUserById` method, used direct ID lookup
+
+**MEDIUM (4 of 5 fixed):**
+- M1: `reissueInvitation` had no compensating rollback on DB failure after auth state change → added try/catch with `disableUser` compensation
+- M2: Swagger DELETE endpoint said "Delete" instead of "Deactivate" → updated descriptions
+- M3: Password change DTO lacked complexity validation → added `@Matches` regex for uppercase/lowercase/digit/special
+- M4: `POST /api/users` creates auth-less users alongside invite flow → marked deprecated in Swagger
+- M5: `docs/README.md` and `docs/index.md` modified but not in story File List → NOT FIXED (documentation-only, low impact)
+
+**LOW (not fixed, acceptable):**
+- L1: `InviteUserDto` allows all roles including 'owner' (intentional design flexibility)
+- L2: Open handles warning in tests (pre-existing, outside story scope)
+
 ### Change Log
 
 - 2026-03-12: Implemented Story 1.4 backend lifecycle support for user invitation, password-change activation, profile availability updates, and account deactivation.
 - 2026-03-12: Added regression coverage for invite, lifecycle, RBAC, and cross-tenant isolation flows plus shared schema/entity updates and the supporting migration.
+- 2026-03-16: Code review completed. Fixed 7 issues (3 HIGH, 4 MEDIUM): post-commit error handling, premature email status, O(n) auth scan, reinvite rollback compensation, Swagger accuracy, password complexity, and deprecated legacy create endpoint.

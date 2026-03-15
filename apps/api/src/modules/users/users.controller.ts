@@ -48,7 +48,13 @@ export class UsersController {
 
   @Post()
   @Roles('owner', 'manager')
-  @ApiOperation({ summary: 'Create a new user (owner/manager only)' })
+  @ApiOperation({
+    summary: 'Create a local-only user (owner/manager only)',
+    description:
+      'DEPRECATED: Creates a DB-only user with no Supabase Auth identity. ' +
+      'Use POST /api/users/invite for full invite flow with authentication and email.',
+    deprecated: true,
+  })
   @ApiResponse({ status: 201, description: 'User created successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({
@@ -105,8 +111,8 @@ export class UsersController {
 
   @Delete(':id')
   @Roles('owner')
-  @ApiOperation({ summary: 'Delete user (owner only)' })
-  @ApiResponse({ status: 200, description: 'User deleted successfully' })
+  @ApiOperation({ summary: 'Deactivate user (owner only)' })
+  @ApiResponse({ status: 200, description: 'User deactivated successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({
     status: 403,

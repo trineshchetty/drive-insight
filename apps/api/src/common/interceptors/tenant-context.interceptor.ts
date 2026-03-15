@@ -84,7 +84,17 @@ export class TenantContextInterceptor implements NestInterceptor {
 
             if (Array.isArray(request.postCommitActions)) {
               for (const action of request.postCommitActions) {
-                await action();
+                try {
+                  await action();
+                } catch (postCommitError) {
+                  // Post-commit actions (e.g. email dispatch) must not fail the
+                  // already-committed response.  Log and continue so the client
+                  // receives the success result rather than a misleading 500.
+                  console.error(
+                    'Post-commit action failed after transaction committed:',
+                    postCommitError,
+                  );
+                }
               }
             }
 
