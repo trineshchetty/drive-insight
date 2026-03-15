@@ -1,0 +1,749 @@
+openapi: 3.0.3
+info:
+  title: Drive Insight API
+  description: |
+    # Drive Insight - Multi-Tenant Dealership Lead Management Platform
+
+    The Drive Insight API provides a comprehensive solution for managing dealership leads,
+    customer interactions, and AI-powered automation across multiple tenants.
+
+    ## Features
+    - **Multi-tenancy**: Complete tenant isolation with row-level security (RLS)
+    - **Role-based Access Control**: Owner, Manager, and Agent roles with granular permissions
+    - **User Management**: Invitation system, profile management, and availability tracking
+    - **Authentication**: JWT-based authentication with forced password changes
+    - **Metrics**: Prometheus-compatible metrics for monitoring
+
+    ## Authentication
+    Most endpoints require authentication via JWT Bearer token. Obtain a token using the `/auth/login` endpoint.
+
+    Include the token in the Authorization header:
+    ```
+    Authorization: Bearer <your-jwt-token>
+    ```
+
+    ## Base URL
+    - Development: `http://localhost:3001/api`
+    - Production: `https://api.driveinsight.com/api`
+
+    ## Rate Limiting
+    Rate limiting is applied per tenant and user role. Contact support for current limits.
+
+    ## Support
+    For API support, visit our documentation or contact the API team.
+  version: 1.0.0
+  contact:
+    name: Drive Insight API Team
+    email: api-support@driveinsight.com
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:3001/api
+    description: Local development server
+  - url: https://api.driveinsight.com/api
+    description: Production server
+
+tags:
+  - name: auth
+    description: Authentication and authorization operations
+  - name: users
+    description: User management and profile operations
+  - name: metrics
+    description: Prometheus metrics for monitoring
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ============================================
+  # Authentication Endpoints
+  # ============================================
+  /auth/login:
+    post:
+      tags:
+        - auth
+      summary: Login with email and password
+      description: |
+        Authenticates a user with their email and password credentials.
+        Returns a JWT access token on successful authentication.
+      operationId: login
+      security: []  # Public endpoint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginDto'
+      responses:
+        '200':
+          description: Login successful, JWT token returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/complete-password-change:
+    post:
+      tags:
+        - auth
+      summary: Complete the forced first-login password change
+      description: |
+        Allows users who have been invited or have `must_change_password` flag set
+        to complete their required password change.
+      operationId: completePasswordChange
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompletePasswordChangeDto'
+      responses:
+        '200':
+          description: Password updated and user activated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordChangeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # ============================================
+  # User Management Endpoints
+  # ============================================
+  /users:
+    get:
+      tags:
+        - users
+      summary: Get all users in current tenant
+      description: |
+        Retrieves all users belonging to the authenticated user's tenant.
+        Row-level security (RLS) ensures tenant isolation.
+      operationId: getAllUsers
+      responses:
+        '200':
+          description: List of users in tenant
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    post:
+      tags:
+        - users
+      summary: Create a new user
+      description: |
+        Creates a new user within the authenticated user's tenant.
+        **Requires**: owner or manager role
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserDto'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /users/whoami:
+    get:
+      tags:
+        - users
+      summary: Get current user info from JWT
+      description: Returns the authenticated user's information decoded from the JWT token.
+      operationId: whoami
+      responses:
+        '200':
+          description: Current user info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/JwtUser'
+                  message:
+                    type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /users/invite:
+    post:
+      tags:
+        - users
+      summary: Invite a tenant user
+      description: |
+        Sends an invitation to a new user to join the tenant.
+        **Requires**: owner role
+      operationId: inviteUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InviteUserDto'
+      responses:
+        '201':
+          description: Invite sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+
+  /users/{id}:
+    patch:
+      tags:
+        - users
+      summary: Update user profile and availability
+      description: |
+        Updates a user's profile information, role, working hours, and availability status.
+        **Requires**: owner role
+      operationId: updateUser
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserDto'
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      tags:
+        - users
+      summary: Delete user
+      description: |
+        Soft deletes a user by setting their account_status to 'disabled'.
+        **Requires**: owner role
+      operationId: deleteUser
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      responses:
+        '200':
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  # ============================================
+  # Metrics Endpoint
+  # ============================================
+  /metrics:
+    get:
+      tags:
+        - metrics
+      summary: Get Prometheus metrics
+      description: |
+        Returns application metrics in Prometheus text exposition format.
+        This endpoint is publicly accessible.
+      operationId: getMetrics
+      security: []  # Public endpoint
+      responses:
+        '200':
+          description: Prometheus metrics in text format
+          content:
+            text/plain:
+              schema:
+                type: string
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from the /auth/login endpoint
+
+  parameters:
+    UserIdParam:
+      name: id
+      in: path
+      required: true
+      description: User ID
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    # ============================================
+    # Authentication Schemas
+    # ============================================
+    LoginDto:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          minLength: 6
+          example: SecurePassword123!
+
+    CompletePasswordChangeDto:
+      type: object
+      required:
+        - newPassword
+      properties:
+        newPassword:
+          type: string
+          format: password
+          minLength: 12
+          maxLength: 128
+          example: UpdatedPassword123!
+
+    LoginResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: JWT access token
+        user:
+          $ref: '#/components/schemas/JwtUser'
+
+    PasswordChangeResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type: string
+              format: email
+            account_status:
+              type: string
+              enum: [invited, active, disabled]
+            must_change_password:
+              type: boolean
+
+    # ============================================
+    # User Management Schemas
+    # ============================================
+    CreateUserDto:
+      type: object
+      required:
+        - email
+        - name
+        - role
+      properties:
+        email:
+          type: string
+          format: email
+          example: newuser@example.com
+        name:
+          type: string
+          maxLength: 255
+          example: New User
+        role:
+          type: string
+          enum: [owner, manager, agent]
+          example: agent
+
+    InviteUserDto:
+      type: object
+      required:
+        - email
+        - name
+        - role
+      properties:
+        email:
+          type: string
+          format: email
+          example: newagent@example.com
+        name:
+          type: string
+          maxLength: 255
+          example: New Agent
+        role:
+          type: string
+          enum: [owner, manager, agent]
+          example: agent
+
+    UpdateUserDto:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          example: updated.user@example.com
+        name:
+          type: string
+          maxLength: 255
+          example: Updated User
+        role:
+          type: string
+          enum: [owner, manager, agent]
+          example: manager
+        working_hours:
+          $ref: '#/components/schemas/WorkingHours'
+        availability:
+          type: boolean
+          example: true
+
+    WorkingHours:
+      type: object
+      description: Weekly working hours schedule
+      additionalProperties:
+        $ref: '#/components/schemas/DaySchedule'
+      example:
+        monday:
+          enabled: true
+          start: '08:00'
+          end: '17:00'
+        tuesday:
+          enabled: true
+          start: '08:00'
+          end: '17:00'
+        wednesday:
+          enabled: true
+          start: '08:00'
+          end: '17:00'
+        thursday:
+          enabled: true
+          start: '08:00'
+          end: '17:00'
+        friday:
+          enabled: true
+          start: '08:00'
+          end: '16:00'
+        saturday:
+          enabled: false
+          start: null
+          end: null
+        sunday:
+          enabled: false
+          start: null
+          end: null
+
+    DaySchedule:
+      type: object
+      required:
+        - enabled
+      properties:
+        enabled:
+          type: boolean
+          example: true
+        start:
+          type: string
+          format: time
+          pattern: '^([0-1][0-9]|2[0-3]):[0-5][0-9]$'
+          example: '09:00'
+          nullable: true
+        end:
+          type: string
+          format: time
+          pattern: '^([0-1][0-9]|2[0-3]):[0-5][0-9]$'
+          example: '17:00'
+          nullable: true
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+        tenant_id:
+          type: string
+          format: uuid
+          example: 660e8400-e29b-41d4-a716-446655440000
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        name:
+          type: string
+          example: John Doe
+        role:
+          type: string
+          enum: [owner, manager, agent]
+          example: agent
+        account_status:
+          type: string
+          enum: [invited, active, disabled]
+          example: active
+        must_change_password:
+          type: boolean
+          example: false
+        invited_at:
+          type: string
+          format: date-time
+          nullable: true
+        activated_at:
+          type: string
+          format: date-time
+          nullable: true
+        disabled_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    JwtUser:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+          enum: [owner, manager, agent]
+        tenant_id:
+          type: string
+          format: uuid
+
+    # ============================================
+    # Data Model Schemas
+    # ============================================
+    Tenant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 255
+        branch:
+          type: string
+          maxLength: 255
+          nullable: true
+        status:
+          type: string
+          maxLength: 50
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AgentProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        working_hours:
+          $ref: '#/components/schemas/WorkingHours'
+        availability:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+          nullable: true
+        actor_user_id:
+          type: string
+          format: uuid
+          nullable: true
+        action:
+          type: string
+          enum: [INSERT, UPDATE, DELETE]
+        entity_type:
+          type: string
+          maxLength: 100
+        entity_id:
+          type: string
+          format: uuid
+        before:
+          type: object
+          nullable: true
+        after:
+          type: object
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    # ============================================
+    # Error Schemas
+    # ============================================
+    ErrorResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+        message:
+          type: string
+        error:
+          type: string
+
+    ValidationErrorResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 400
+        message:
+          type: array
+          items:
+            type: string
+        error:
+          type: string
+          example: Bad Request
+
+  responses:
+    UnauthorizedError:
+      description: Unauthorized - invalid or missing JWT token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            statusCode: 401
+            message: Unauthorized
+            error: Unauthorized
+
+    ForbiddenError:
+      description: Forbidden - insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            statusCode: 403
+            message: Forbidden - requires owner role
+            error: Forbidden
+
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            statusCode: 404
+            message: User not found
+            error: Not Found
+
+    BadRequestError:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            statusCode: 400
+            message: Bad request
+            error: Bad Request
+
+    ValidationError:
+      description: Validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+          example:
+            statusCode: 400
+            message:
+              - email must be an email
+              - name should not be empty
+            error: Bad Request
+
+    ConflictError:
+      description: Conflict - resource already exists
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            statusCode: 409
+            message: User with this email already exists
+            error: Conflict

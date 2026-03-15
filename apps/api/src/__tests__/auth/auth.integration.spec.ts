@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
+import { randomUUID } from 'crypto';
 import { AppModule } from '../../app.module';
 import { DataSource } from 'typeorm';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
@@ -161,6 +162,208 @@ describe('Authentication Integration Tests (e2e)', () => {
           password: 'password123',
         })
         .expect(400);
+    });
+  });
+
+  describe('First-Login Password Change Lifecycle', () => {
+    let invitedUserId: string;
+    let invitedEmail: string;
+    const temporaryPassword = 'TempPassword123!';
+    const newPassword = 'UpdatedPassword123!';
+
+    beforeAll(async () => {
+      invitedEmail = `invited-${randomUUID()}@example.com`;
+
+      const { data, error } = await supabaseAdmin.auth.admin.createUser({
+        email: invitedEmail,
+        password: temporaryPassword,
+        email_confirm: true,
+      });
+
+      if (error || !data.user) {
+        throw error || new Error('Failed to create invited auth user');
+      }
+
+      invitedUserId = data.user.id;
+
+      await adminDataSource.query(
+        `INSERT INTO users (
+           id,
+           tenant_id,
+           email,
+           role,
+           name,
+           account_status,
+           must_change_password,
+           invited_at
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+        [
+          invitedUserId,
+          TENANT_A_ID,
+          invitedEmail,
+          'agent',
+          'Invited Agent',
+          'invited',
+          true,
+        ],
+      );
+    });
+
+    afterAll(async () => {
+      await adminDataSource.query('DELETE FROM users WHERE id = $1', [invitedUserId]);
+      await supabaseAdmin.auth.admin.deleteUser(invitedUserId);
+    });
+
+    it('returns lifecycle flags on login and blocks protected routes until the password is changed', async () => {
+      const loginResponse = await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({
+          email: invitedEmail,
+          password: temporaryPassword,
+        })
+        .expect(201);
+
+      expect(loginResponse.body).toMatchObject({
+        requires_password_change: true,
+        user: {
+          id: invitedUserId,
+          account_status: 'invited',
+          must_change_password: true,
+        },
+      });
+
+      await request(app.getHttpServer())
+        .get('/api/users')
+        .set('Authorization', `Bearer ${loginResponse.body.access_token}`)
+        .expect(403);
+    });
+
+    it('completes the password change, activates the user, and invalidates the temporary password', async () => {
+      const loginResponse = await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({
+          email: invitedEmail,
+          password: temporaryPassword,
+        })
+        .expect(201);
+
+      const completeResponse = await request(app.getHttpServer())
+        .post('/api/auth/complete-password-change')
+        .set('Authorization', `Bearer ${loginResponse.body.access_token}`)
+        .send({
+          newPassword,
+        })
+        .expect(201);
+
+      expect(completeResponse.body).toMatchObject({
+        message: 'Password updated successfully',
+        user: {
+          id: invitedUserId,
+          account_status: 'active',
+          must_change_password: false,
+        },
+      });
+
+      const rows = await adminDataSource.query(
+        `SELECT account_status, must_change_password, activated_at
+         FROM users
+         WHERE id = $1`,
+        [invitedUserId],
+      );
+
+      expect(rows[0].account_status).toBe('active');
+      expect(rows[0].must_change_password).toBe(false);
+      expect(rows[0].activated_at).not.toBeNull();
+
+      await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({
+          email: invitedEmail,
+          password: temporaryPassword,
+        })
+        .expect(401);
+
+      const reloginResponse = await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({
+          email: invitedEmail,
+          password: newPassword,
+        })
+        .expect(201);
+
+      expect(reloginResponse.body).toMatchObject({
+        requires_password_change: false,
+        user: {
+          id: invitedUserId,
+          account_status: 'active',
+          must_change_password: false,
+        },
+      });
+    });
+  });
+
+  describe('Disabled User Lifecycle', () => {
+    let disabledUserId: string;
+    let disabledEmail: string;
+    const disabledPassword = 'DisabledPassword123!';
+
+    beforeAll(async () => {
+      disabledEmail = `disabled-${randomUUID()}@example.com`;
+
+      const { data, error } = await supabaseAdmin.auth.admin.createUser({
+        email: disabledEmail,
+        password: disabledPassword,
+        email_confirm: true,
+      });
+
+      if (error || !data.user) {
+        throw error || new Error('Failed to create disabled auth user');
+      }
+
+      disabledUserId = data.user.id;
+
+      await adminDataSource.query(
+        `INSERT INTO users (
+           id,
+           tenant_id,
+           email,
+           role,
+           name,
+           account_status,
+           must_change_password,
+           disabled_at
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+        [
+          disabledUserId,
+          TENANT_A_ID,
+          disabledEmail,
+          'agent',
+          'Disabled Agent',
+          'disabled',
+          false,
+        ],
+      );
+    });
+
+    afterAll(async () => {
+      await adminDataSource.query('DELETE FROM users WHERE id = $1', [disabledUserId]);
+      await supabaseAdmin.auth.admin.deleteUser(disabledUserId);
+    });
+
+    it('refuses login for disabled users even when Supabase credentials are valid', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({
+          email: disabledEmail,
+          password: disabledPassword,
+        })
+        .expect(401);
+
+      expect(response.body).toMatchObject({
+        message: 'Account disabled',
+      });
     });
   });
 

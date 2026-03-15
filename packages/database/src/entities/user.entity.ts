@@ -34,6 +34,21 @@ export class User {
   @Column({ type: 'varchar', length: 255 })
   name: string;
 
+  @Column({ type: 'varchar', length: 50, default: 'active' })
+  account_status: 'invited' | 'active' | 'disabled';
+
+  @Column({ type: 'boolean', default: false })
+  must_change_password: boolean;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  invited_at?: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  activated_at?: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  disabled_at?: Date | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 

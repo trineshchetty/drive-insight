@@ -46,6 +46,8 @@ export class TenantContextInterceptor implements NestInterceptor {
     user: { id: string; tenant_id: string; role: string; email?: string },
     next: CallHandler,
   ): Promise<any> {
+    request.postCommitActions = [];
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
 
@@ -79,6 +81,13 @@ export class TenantContextInterceptor implements NestInterceptor {
           try {
             const response = await lastValueFrom(next.handle());
             await queryRunner.commitTransaction();
+
+            if (Array.isArray(request.postCommitActions)) {
+              for (const action of request.postCommitActions) {
+                await action();
+              }
+            }
+
             return response;
           } catch (error) {
             if (queryRunner.isTransactionActive) {

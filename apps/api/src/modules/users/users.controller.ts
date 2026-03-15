@@ -18,6 +18,7 @@ import { UsersService } from './users.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { InviteUserDto } from './dto/invite-user.dto';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -62,14 +63,36 @@ export class UsersController {
     );
   }
 
+  @Post('invite')
+  @Roles('owner')
+  @ApiOperation({ summary: 'Invite a tenant user (owner only)' })
+  @ApiResponse({ status: 201, description: 'Invite sent successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - requires owner role',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Conflict - duplicate or unrecoverable invite state',
+  })
+  async inviteUser(@Body() inviteUserDto: InviteUserDto, @Request() req: any) {
+    return this.usersService.inviteUser(
+      inviteUserDto,
+      req.user,
+      req.queryRunner,
+      req,
+    );
+  }
+
   @Patch(':id')
-  @Roles('owner', 'manager')
-  @ApiOperation({ summary: 'Update user profile (owner/manager only)' })
+  @Roles('owner')
+  @ApiOperation({ summary: 'Update user profile and availability (owner only)' })
   @ApiResponse({ status: 200, description: 'User updated successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden - requires owner or manager role',
+    description: 'Forbidden - requires owner role',
   })
   @ApiResponse({ status: 404, description: 'User not found' })
   async updateUser(
@@ -91,6 +114,6 @@ export class UsersController {
   })
   @ApiResponse({ status: 404, description: 'User not found' })
   async deleteUser(@Param('id') id: string, @Request() req: any) {
-    return this.usersService.deleteUser(id, req.queryRunner);
+    return this.usersService.deleteUser(id, req.user, req.queryRunner);
   }
 }

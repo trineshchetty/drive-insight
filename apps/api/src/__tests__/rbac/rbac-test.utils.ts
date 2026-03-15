@@ -142,13 +142,7 @@ export async function createAuthenticatedUser(
     throw dbError;
   }
 
-  const loginResponse = await request(ctx.app.getHttpServer())
-    .post('/api/auth/login')
-    .send({
-      email,
-      password,
-    })
-    .expect(201);
+  const loginResponse = await loginWithRetry(ctx, email, password);
 
   return {
     id: data.user.id,
@@ -185,4 +179,35 @@ async function ensureTenant(
 
 function buildUniqueEmail(prefix: string): string {
   return `${prefix}-${randomUUID()}@example.com`;
+}
+
+async function loginWithRetry(
+  ctx: RbacTestContext,
+  email: string,
+  password: string,
+  maxAttempts = 5,
+) {
+  let lastResponse:
+    | request.Response
+    | undefined;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const response = await request(ctx.app.getHttpServer())
+      .post('/api/auth/login')
+      .send({
+        email,
+        password,
+      });
+
+    if (response.status === 201) {
+      return response;
+    }
+
+    lastResponse = response;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+
+  throw new Error(
+    `Failed to login seeded user ${email} after ${maxAttempts} attempts. Last response: ${lastResponse?.status} ${JSON.stringify(lastResponse?.body)}`,
+  );
 }

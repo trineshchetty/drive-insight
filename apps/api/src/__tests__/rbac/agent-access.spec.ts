@@ -1,11 +1,11 @@
 import * as request from 'supertest';
-import { RbacTestContext, createAuthenticatedUser, createRbacTestContext, deleteSupabaseUsers } from './rbac-test.utils';
+import {
+  RbacTestContext,
+  createAuthenticatedUser,
+  createRbacTestContext,
+  deleteSupabaseUsers,
+} from './rbac-test.utils';
 
-/**
- * Agent Role Access Control Tests
- *
- * Verifies real HTTP access control for agent users.
- */
 describe('Agent Access Control', () => {
   let ctx: RbacTestContext;
   const createdUsers: Array<{ id: string }> = [];
@@ -19,7 +19,7 @@ describe('Agent Access Control', () => {
     await ctx.cleanup();
   });
 
-  it('returns 403 when an agent attempts to create a user and the handler does not persist anything', async () => {
+  it('returns 403 when an agent attempts to create a local-only user and the handler does not persist anything', async () => {
     const agent = await createAuthenticatedUser(ctx, {
       tenantId: ctx.tenantAId,
       role: 'agent',
@@ -43,6 +43,35 @@ describe('Agent Access Control', () => {
     const result = await ctx.adminDataSource.query(
       'SELECT id FROM users WHERE email = $1',
       [forbiddenEmail],
+    );
+
+    expect(result).toHaveLength(0);
+  });
+
+  it('returns 403 when an agent attempts to invite a user', async () => {
+    const agent = await createAuthenticatedUser(ctx, {
+      tenantId: ctx.tenantAId,
+      role: 'agent',
+      name: 'Agent Invite',
+      emailPrefix: 'rbac-agent-invite',
+    });
+    createdUsers.push(agent);
+
+    const blockedEmail = `blocked-invite-${Date.now()}@example.com`;
+
+    await request(ctx.app.getHttpServer())
+      .post('/api/users/invite')
+      .set('Authorization', `Bearer ${agent.token}`)
+      .send({
+        email: blockedEmail,
+        name: 'Blocked Invite',
+        role: 'agent',
+      })
+      .expect(403);
+
+    const result = await ctx.adminDataSource.query(
+      'SELECT id FROM users WHERE email = $1',
+      [blockedEmail],
     );
 
     expect(result).toHaveLength(0);

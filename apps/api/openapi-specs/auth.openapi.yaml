@@ -1,0 +1,282 @@
+openapi: 3.0.3
+info:
+  title: Drive Insight - Auth Module API
+  description: |
+    Authentication module for the Drive Insight multi-tenant dealership lead management platform.
+    Handles user authentication, login, and password management.
+  version: 1.0.0
+  contact:
+    name: Drive Insight API Team
+
+servers:
+  - url: http://localhost:3001/api
+    description: Local development server
+  - url: https://api.driveinsight.com/api
+    description: Production server
+
+tags:
+  - name: auth
+    description: Authentication operations
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - auth
+      summary: Login with email and password
+      description: |
+        Authenticates a user with their email and password credentials.
+        Returns a JWT access token on successful authentication.
+        This endpoint is public and does not require authentication.
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginDto'
+            examples:
+              validLogin:
+                summary: Valid login credentials
+                value:
+                  email: user@example.com
+                  password: SecurePassword123!
+      responses:
+        '200':
+          description: Login successful, JWT token returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+              examples:
+                successfulLogin:
+                  summary: Successful authentication
+                  value:
+                    access_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                    user:
+                      id: 550e8400-e29b-41d4-a716-446655440000
+                      email: user@example.com
+                      name: John Doe
+                      role: agent
+                      tenant_id: 660e8400-e29b-41d4-a716-446655440000
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidCredentials:
+                  summary: Authentication failed
+                  value:
+                    statusCode: 401
+                    message: Invalid credentials
+                    error: Unauthorized
+        '400':
+          description: Bad request - validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+
+  /auth/complete-password-change:
+    post:
+      tags:
+        - auth
+      summary: Complete the forced first-login password change
+      description: |
+        Allows users who have been invited or have `must_change_password` flag set
+        to complete their required password change. Updates the user's password and
+        activates their account.
+      operationId: completePasswordChange
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompletePasswordChangeDto'
+            examples:
+              validPasswordChange:
+                summary: Valid password change request
+                value:
+                  newPassword: NewSecurePassword123!
+      responses:
+        '200':
+          description: Password updated and user activated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordChangeResponse'
+              examples:
+                successfulChange:
+                  summary: Password changed successfully
+                  value:
+                    message: Password updated successfully
+                    user:
+                      id: 550e8400-e29b-41d4-a716-446655440000
+                      email: user@example.com
+                      account_status: active
+                      must_change_password: false
+        '400':
+          description: Password change not required or validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notRequired:
+                  summary: Password change not required
+                  value:
+                    statusCode: 400
+                    message: Password change not required
+                    error: Bad Request
+        '401':
+          description: Unauthorized - invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from the login endpoint
+
+  schemas:
+    LoginDto:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          minLength: 6
+          description: User's password (minimum 6 characters)
+          example: SecurePassword123!
+
+    CompletePasswordChangeDto:
+      type: object
+      required:
+        - newPassword
+      properties:
+        newPassword:
+          type: string
+          format: password
+          minLength: 12
+          maxLength: 128
+          description: New password (12-128 characters)
+          example: UpdatedPassword123!
+
+    LoginResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: JWT access token for authenticated requests
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        user:
+          $ref: '#/components/schemas/UserInfo'
+
+    PasswordChangeResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Password updated successfully
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type: string
+              format: email
+            account_status:
+              type: string
+              enum: [invited, active, disabled]
+            must_change_password:
+              type: boolean
+
+    UserInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: User's unique identifier
+          example: 550e8400-e29b-41d4-a716-446655440000
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: user@example.com
+        name:
+          type: string
+          description: User's full name
+          example: John Doe
+        role:
+          type: string
+          enum: [owner, manager, agent]
+          description: User's role within the tenant
+          example: agent
+        tenant_id:
+          type: string
+          format: uuid
+          description: Tenant ID the user belongs to
+          example: 660e8400-e29b-41d4-a716-446655440000
+        account_status:
+          type: string
+          enum: [invited, active, disabled]
+          description: Current account status
+          example: active
+        must_change_password:
+          type: boolean
+          description: Whether user must change password on next login
+          example: false
+
+    ErrorResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          description: HTTP status code
+          example: 401
+        message:
+          type: string
+          description: Error message
+          example: Invalid credentials
+        error:
+          type: string
+          description: Error type
+          example: Unauthorized
+
+    ValidationErrorResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 400
+        message:
+          type: array
+          items:
+            type: string
+          description: List of validation errors
+          example:
+            - email must be an email
+            - password must be longer than or equal to 6 characters
+        error:
+          type: string
+          example: Bad Request

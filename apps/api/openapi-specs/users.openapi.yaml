@@ -1,0 +1,659 @@
+openapi: 3.0.3
+info:
+  title: Drive Insight - Users Module API
+  description: |
+    User management module for the Drive Insight multi-tenant dealership lead management platform.
+    Handles user CRUD operations, invitations, profile management, and tenant-isolated user data.
+
+    Role-based access control (RBAC):
+    - **Owner**: Full access to all user operations
+    - **Manager**: Can create users
+    - **Agent**: Read-only access to their own profile
+  version: 1.0.0
+  contact:
+    name: Drive Insight API Team
+
+servers:
+  - url: http://localhost:3001/api
+    description: Local development server
+  - url: https://api.driveinsight.com/api
+    description: Production server
+
+tags:
+  - name: users
+    description: User management operations
+
+security:
+  - bearerAuth: []
+
+paths:
+  /users:
+    get:
+      tags:
+        - users
+      summary: Get all users in current tenant (RLS enforced)
+      description: |
+        Retrieves all users belonging to the authenticated user's tenant.
+        Row-level security (RLS) ensures tenant isolation.
+        Available to all authenticated users.
+      operationId: getAllUsers
+      responses:
+        '200':
+          description: List of users in tenant
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+              examples:
+                userList:
+                  summary: Sample user list
+                  value:
+                    - id: 550e8400-e29b-41d4-a716-446655440000
+                      tenant_id: 660e8400-e29b-41d4-a716-446655440000
+                      email: owner@dealership.com
+                      name: John Owner
+                      role: owner
+                      account_status: active
+                      must_change_password: false
+                      created_at: '2024-01-15T10:30:00Z'
+                      updated_at: '2024-01-15T10:30:00Z'
+                    - id: 550e8400-e29b-41d4-a716-446655440001
+                      tenant_id: 660e8400-e29b-41d4-a716-446655440000
+                      email: agent@dealership.com
+                      name: Jane Agent
+                      role: agent
+                      account_status: active
+                      must_change_password: false
+                      created_at: '2024-01-16T14:20:00Z'
+                      updated_at: '2024-01-16T14:20:00Z'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    post:
+      tags:
+        - users
+      summary: Create a new user (owner/manager only)
+      description: |
+        Creates a new user within the authenticated user's tenant.
+        Requires owner or manager role.
+      operationId: createUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserDto'
+            examples:
+              createAgent:
+                summary: Create an agent user
+                value:
+                  email: newagent@dealership.com
+                  name: New Agent
+                  role: agent
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /users/whoami:
+    get:
+      tags:
+        - users
+      summary: Get current user info from JWT
+      description: |
+        Returns the authenticated user's information decoded from the JWT token.
+        Available to all authenticated users.
+      operationId: whoami
+      responses:
+        '200':
+          description: Current user info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/JwtUser'
+                  message:
+                    type: string
+                    example: Authenticated successfully
+              examples:
+                currentUser:
+                  summary: Current user information
+                  value:
+                    user:
+                      id: 550e8400-e29b-41d4-a716-446655440000
+                      email: agent@dealership.com
+                      name: Jane Agent
+                      role: agent
+                      tenant_id: 660e8400-e29b-41d4-a716-446655440000
+                    message: Authenticated successfully
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /users/invite:
+    post:
+      tags:
+        - users
+      summary: Invite a tenant user (owner only)
+      description: |
+        Sends an invitation to a new user to join the tenant.
+        Creates the user account with 'invited' status and sends an email with temporary credentials.
+        Requires owner role.
+      operationId: inviteUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InviteUserDto'
+            examples:
+              inviteAgent:
+                summary: Invite a new agent
+                value:
+                  email: newagent@dealership.com
+                  name: New Agent
+                  role: agent
+      responses:
+        '201':
+          description: Invite sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+              examples:
+                inviteSuccess:
+                  summary: Successful invitation
+                  value:
+                    message: Invitation sent successfully
+                    user:
+                      id: 550e8400-e29b-41d4-a716-446655440002
+                      email: newagent@dealership.com
+                      name: New Agent
+                      role: agent
+                      account_status: invited
+                      must_change_password: true
+                      invited_at: '2024-01-20T10:00:00Z'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          description: Conflict - duplicate or unrecoverable invite state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                duplicateEmail:
+                  summary: Email already exists
+                  value:
+                    statusCode: 409
+                    message: User with this email already exists
+                    error: Conflict
+
+  /users/{id}:
+    patch:
+      tags:
+        - users
+      summary: Update user profile and availability (owner only)
+      description: |
+        Updates a user's profile information, role, working hours, and availability status.
+        Requires owner role.
+      operationId: updateUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID to update
+          schema:
+            type: string
+            format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserDto'
+            examples:
+              updateProfile:
+                summary: Update user profile
+                value:
+                  name: Updated Name
+                  email: updated@dealership.com
+              updateAvailability:
+                summary: Update agent availability
+                value:
+                  availability: false
+              updateWorkingHours:
+                summary: Update working hours
+                value:
+                  working_hours:
+                    monday:
+                      enabled: true
+                      start: '09:00'
+                      end: '17:00'
+                    tuesday:
+                      enabled: true
+                      start: '09:00'
+                      end: '17:00'
+                    wednesday:
+                      enabled: true
+                      start: '09:00'
+                      end: '17:00'
+                    thursday:
+                      enabled: true
+                      start: '09:00'
+                      end: '17:00'
+                    friday:
+                      enabled: true
+                      start: '09:00'
+                      end: '15:00'
+                    saturday:
+                      enabled: false
+                      start: null
+                      end: null
+                    sunday:
+                      enabled: false
+                      start: null
+                      end: null
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  summary: User not found
+                  value:
+                    statusCode: 404
+                    message: User not found
+                    error: Not Found
+
+    delete:
+      tags:
+        - users
+      summary: Delete user (owner only)
+      description: |
+        Soft deletes a user by setting their account_status to 'disabled'.
+        Requires owner role.
+      operationId: deleteUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID to delete
+          schema:
+            type: string
+            format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+      responses:
+        '200':
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: User deleted successfully
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from the /auth/login endpoint
+
+  schemas:
+    CreateUserDto:
+      type: object
+      required:
+        - email
+        - name
+        - role
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: newuser@example.com
+        name:
+          type: string
+          maxLength: 255
+          description: User's full name
+          example: New User
+        role:
+          type: string
+          enum: [owner, manager, agent]
+          description: User's role within the tenant
+          example: agent
+
+    InviteUserDto:
+      type: object
+      required:
+        - email
+        - name
+        - role
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email address to send invitation
+          example: newagent@example.com
+        name:
+          type: string
+          maxLength: 255
+          description: Full name of the invited user
+          example: New Agent
+        role:
+          type: string
+          enum: [owner, manager, agent]
+          description: Role to assign to the invited user
+          example: agent
+
+    UpdateUserDto:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: Updated email address
+          example: updated.user@example.com
+        name:
+          type: string
+          maxLength: 255
+          description: Updated full name
+          example: Updated User
+        role:
+          type: string
+          enum: [owner, manager, agent]
+          description: Updated role
+          example: manager
+        working_hours:
+          $ref: '#/components/schemas/WorkingHours'
+        availability:
+          type: boolean
+          description: Agent availability status
+          example: true
+
+    WorkingHours:
+      type: object
+      description: Weekly working hours schedule
+      properties:
+        monday:
+          $ref: '#/components/schemas/DaySchedule'
+        tuesday:
+          $ref: '#/components/schemas/DaySchedule'
+        wednesday:
+          $ref: '#/components/schemas/DaySchedule'
+        thursday:
+          $ref: '#/components/schemas/DaySchedule'
+        friday:
+          $ref: '#/components/schemas/DaySchedule'
+        saturday:
+          $ref: '#/components/schemas/DaySchedule'
+        sunday:
+          $ref: '#/components/schemas/DaySchedule'
+      example:
+        monday:
+          enabled: true
+          start: '08:00'
+          end: '17:00'
+        tuesday:
+          enabled: true
+          start: '08:00'
+          end: '17:00'
+        wednesday:
+          enabled: true
+          start: '08:00'
+          end: '17:00'
+        thursday:
+          enabled: true
+          start: '08:00'
+          end: '17:00'
+        friday:
+          enabled: true
+          start: '08:00'
+          end: '16:00'
+        saturday:
+          enabled: false
+          start: null
+          end: null
+        sunday:
+          enabled: false
+          start: null
+          end: null
+
+    DaySchedule:
+      type: object
+      required:
+        - enabled
+      properties:
+        enabled:
+          type: boolean
+          description: Whether the agent works on this day
+          example: true
+        start:
+          type: string
+          format: time
+          pattern: '^([0-1][0-9]|2[0-3]):[0-5][0-9]$'
+          description: Start time in HH:mm format (null if not enabled)
+          example: '09:00'
+          nullable: true
+        end:
+          type: string
+          format: time
+          pattern: '^([0-1][0-9]|2[0-3]):[0-5][0-9]$'
+          description: End time in HH:mm format (null if not enabled)
+          example: '17:00'
+          nullable: true
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: User's unique identifier
+          example: 550e8400-e29b-41d4-a716-446655440000
+        tenant_id:
+          type: string
+          format: uuid
+          description: Tenant ID the user belongs to
+          example: 660e8400-e29b-41d4-a716-446655440000
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: user@example.com
+        name:
+          type: string
+          description: User's full name
+          example: John Doe
+        role:
+          type: string
+          enum: [owner, manager, agent]
+          description: User's role within the tenant
+          example: agent
+        account_status:
+          type: string
+          enum: [invited, active, disabled]
+          description: Current account status
+          example: active
+        must_change_password:
+          type: boolean
+          description: Whether user must change password on next login
+          example: false
+        invited_at:
+          type: string
+          format: date-time
+          description: Timestamp when user was invited
+          example: '2024-01-15T10:30:00Z'
+          nullable: true
+        activated_at:
+          type: string
+          format: date-time
+          description: Timestamp when user account was activated
+          example: '2024-01-15T11:00:00Z'
+          nullable: true
+        disabled_at:
+          type: string
+          format: date-time
+          description: Timestamp when user was disabled
+          example: null
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          description: Record creation timestamp
+          example: '2024-01-15T10:30:00Z'
+        updated_at:
+          type: string
+          format: date-time
+          description: Record last update timestamp
+          example: '2024-01-15T10:30:00Z'
+
+    JwtUser:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+          enum: [owner, manager, agent]
+        tenant_id:
+          type: string
+          format: uuid
+
+    ErrorResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          description: HTTP status code
+        message:
+          type: string
+          description: Error message
+        error:
+          type: string
+          description: Error type
+
+    ValidationErrorResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 400
+        message:
+          type: array
+          items:
+            type: string
+          description: List of validation errors
+        error:
+          type: string
+          example: Bad Request
+
+  responses:
+    UnauthorizedError:
+      description: Unauthorized - invalid or missing JWT token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            unauthorized:
+              summary: Missing or invalid token
+              value:
+                statusCode: 401
+                message: Unauthorized
+                error: Unauthorized
+
+    ForbiddenError:
+      description: Forbidden - insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            forbidden:
+              summary: Insufficient role permissions
+              value:
+                statusCode: 403
+                message: Forbidden - requires owner role
+                error: Forbidden
+
+    ValidationError:
+      description: Bad request - validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+          examples:
+            validationFailed:
+              summary: Validation errors
+              value:
+                statusCode: 400
+                message:
+                  - email must be an email
+                  - name should not be empty
+                error: Bad Request

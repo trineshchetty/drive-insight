@@ -1,0 +1,98 @@
+openapi: 3.0.3
+info:
+  title: Drive Insight - Metrics Module API
+  description: |
+    Metrics module for the Drive Insight multi-tenant dealership lead management platform.
+    Provides Prometheus-compatible metrics for monitoring and observability.
+    This endpoint is publicly accessible for monitoring systems.
+  version: 1.0.0
+  contact:
+    name: Drive Insight API Team
+
+servers:
+  - url: http://localhost:3001/api
+    description: Local development server
+  - url: https://api.driveinsight.com/api
+    description: Production server
+
+tags:
+  - name: metrics
+    description: Prometheus metrics operations
+
+paths:
+  /metrics:
+    get:
+      tags:
+        - metrics
+      summary: Get Prometheus metrics
+      description: |
+        Returns application metrics in Prometheus text exposition format.
+        This endpoint is publicly accessible and does not require authentication.
+
+        Provides metrics for:
+        - HTTP request counts and durations
+        - System resource usage
+        - Custom application metrics
+        - Database connection pool statistics
+      operationId: getMetrics
+      responses:
+        '200':
+          description: Prometheus metrics in text format
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: Prometheus metrics in text exposition format
+              examples:
+                prometheusMetrics:
+                  summary: Sample Prometheus metrics
+                  value: |
+                    # HELP http_requests_total Total number of HTTP requests
+                    # TYPE http_requests_total counter
+                    http_requests_total{method="GET",route="/api/users",status="200"} 145
+                    http_requests_total{method="POST",route="/api/auth/login",status="200"} 23
+                    http_requests_total{method="GET",route="/api/metrics",status="200"} 512
+
+                    # HELP http_request_duration_seconds HTTP request duration in seconds
+                    # TYPE http_request_duration_seconds histogram
+                    http_request_duration_seconds_bucket{method="GET",route="/api/users",le="0.005"} 10
+                    http_request_duration_seconds_bucket{method="GET",route="/api/users",le="0.01"} 50
+                    http_request_duration_seconds_bucket{method="GET",route="/api/users",le="0.025"} 100
+                    http_request_duration_seconds_bucket{method="GET",route="/api/users",le="+Inf"} 145
+                    http_request_duration_seconds_sum{method="GET",route="/api/users"} 1.2345
+                    http_request_duration_seconds_count{method="GET",route="/api/users"} 145
+
+                    # HELP process_cpu_user_seconds_total Total user CPU time spent in seconds
+                    # TYPE process_cpu_user_seconds_total counter
+                    process_cpu_user_seconds_total 12.34
+
+                    # HELP process_heap_bytes Process heap size in bytes
+                    # TYPE process_heap_bytes gauge
+                    process_heap_bytes 52428800
+
+                    # HELP nodejs_eventloop_lag_seconds Lag of event loop in seconds
+                    # TYPE nodejs_eventloop_lag_seconds gauge
+                    nodejs_eventloop_lag_seconds 0.001234
+
+                    # HELP db_connections_active Number of active database connections
+                    # TYPE db_connections_active gauge
+                    db_connections_active 5
+
+                    # HELP db_connections_idle Number of idle database connections
+                    # TYPE db_connections_idle gauge
+                    db_connections_idle 15
+
+components:
+  schemas:
+    PrometheusMetrics:
+      type: string
+      description: |
+        Prometheus metrics in text exposition format.
+        Each metric includes:
+        - HELP text describing the metric
+        - TYPE indicating the metric type (counter, gauge, histogram, summary)
+        - Metric values with labels
+      example: |
+        # HELP http_requests_total Total number of HTTP requests
+        # TYPE http_requests_total counter
+        http_requests_total{method="GET",route="/api/users",status="200"} 145
